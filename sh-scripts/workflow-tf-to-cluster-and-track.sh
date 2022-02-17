@@ -37,6 +37,8 @@ function go-tf-to-cluster-track() {
     RECO_OPTIONS="MFTTracking.FullClusterScan=false; MFTTracking.MinTrackPointsLTF=5; MFTTracking.MinTrackStationsLTF=4; MFTTracking.LTFclsRCut=0.2; MFTTracking.LTFseed2BinWin=3; MFTTracking.MinTrackStationsCA=4; MFTTracking.ROADclsRCut=0.04; MFTTracking.MinTrackPointsCA=5;MFTAlpideParam.roFrameLengthInBC=198;"
     OUTDIR=${prefix}-outdir
     LOG=${OUTDIR}/tf-to-cluster-track.log
+    SHMSIZE=$(( 8 << 30 ))
+    NTHREADS=3
 
     mkdir -p ${OUTDIR}/raw
     mkdir -p finished
@@ -49,9 +51,9 @@ function go-tf-to-cluster-track() {
     echo "Start "${START_TIME}
     echo "Start "${START_TIME} >> ${LOG}
     echo >> ${LOG}
-    echo "o2-raw-tf-reader-workflow -b --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^/alice/data/.+\" --shm-segment-size 15000000000 --input-data "${inputfile}" --onlyDet MFT |  o2-itsmft-stf-decoder-workflow -b --runmft --shm-segment-size 15000000000 --nthreads 4 --digits --no-clusters --no-cluster-patterns | o2-mft-reco-workflow -b --run --mft-track-writer \"--outfile "${OUTDIR}"/mfttracks.root\" --mft-cluster-writer \"--outfile "${OUTDIR}"/mftclusters.root\" --shm-segment-size 15000000000 --digits-from-upstream --disable-mc --configKeyValues \""${RECO_OPTIONS}"\"" >> ${LOG}
+    echo "o2-raw-tf-reader-workflow -b --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^/alice/data/.+\" --shm-segment-size "${SHMSIZE}" --input-data "${inputfile}" --onlyDet MFT |  o2-itsmft-stf-decoder-workflow -b --runmft --shm-segment-size "${SHMSIZE}" --nthreads "${NTHREADS}" --digits --no-clusters --no-cluster-patterns | o2-mft-reco-workflow -b --run --mft-track-writer \"--outfile "${OUTDIR}"/mfttracks.root\" --mft-cluster-writer \"--outfile "${OUTDIR}"/mftclusters.root\" --shm-segment-size "${SHMSIZE}" --digits-from-upstream --disable-mc --configKeyValues \""${RECO_OPTIONS}"\"" >> ${LOG}
     echo >> ${LOG}
-    o2-raw-tf-reader-workflow -b --copy-cmd "alien_cp ?src file://?dst" --remote-regex "^/alice/data/2021/.+" --shm-segment-size 15000000000 --input-data ${inputfile} --onlyDet MFT |  o2-itsmft-stf-decoder-workflow  -b --runmft --shm-segment-size 15000000000 --nthreads 4 --digits --no-clusters --no-cluster-patterns | o2-mft-reco-workflow -b --run --mft-track-writer "--outfile ${OUTDIR}/mfttracks.root" --mft-cluster-writer "--outfile ${OUTDIR}/mftclusters.root" --shm-segment-size 15000000000 --digits-from-upstream --disable-mc --configKeyValues ${RECO_OPTIONS} >> ${LOG}
+    o2-raw-tf-reader-workflow -b --copy-cmd "alien_cp ?src file://?dst" --remote-regex "^/alice/data/2021/.+" --shm-segment-size ${SHMSIZE} --input-data ${inputfile} --onlyDet MFT |  o2-itsmft-stf-decoder-workflow  -b --runmft --shm-segment-size ${SHMSIZE} --nthreads ${NTHREADS} --digits --no-clusters --no-cluster-patterns | o2-mft-reco-workflow -b --run --mft-track-writer "--outfile ${OUTDIR}/mfttracks.root" --mft-cluster-writer "--outfile ${OUTDIR}/mftclusters.root" --shm-segment-size ${SHMSIZE} --digits-from-upstream --disable-mc --configKeyValues ${RECO_OPTIONS} >> ${LOG}
     echo
     mv -v ${inputfile} finished/${inputfile}
     mv rawdump*.raw ${OUTDIR}/raw/.
