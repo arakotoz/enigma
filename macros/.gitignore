@@ -1,0 +1,17 @@
+# Cint generated files
+*_C.d
+*rdict.pcm
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Datafiles
+*.root
