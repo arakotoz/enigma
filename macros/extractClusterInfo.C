@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <Rtypes.h>
+#include <TChain.h>
 
 #include <MathUtils/Cartesian.h>
 
@@ -11,6 +12,8 @@
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "ReconstructionDataFormats/BaseCluster.h"
 #include "MFTTracking/IOUtils.h"
+#include "MFTBase/Geometry.h"
+#include "MFTBase/GeometryTGeo.h"
 
 using MFTCluster = o2::BaseCluster<double>;
 
