@@ -1,3 +1,5 @@
+#if !defined(__CLING__) || defined(__ROOTCLING__)
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -14,6 +16,8 @@
 #include "MFTTracking/IOUtils.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
+
+#endif
 
 using MFTCluster = o2::BaseCluster<double>;
 
@@ -81,11 +85,12 @@ void convertCompactClusters(std::vector<o2::itsmft::CompClusterExt> clusters,
                             std::vector<MFTCluster>& output,
                             o2::itsmft::TopologyDictionary& dict)
 {
+    // inspired from Detectors/ITSMFT/MFT/tracking/src/IOUtils.cxx
     for (auto& c : clusters) {
         auto chipID = c.getChipID();
         auto pattID = c.getPatternID();
         o2::math_utils::Point3D<double> locXYZ;
-        double sigmaX2 = o2::mft::ioutils::DefClusError2Row, sigmaY2 = o2::mft::ioutils::DefClusError2Col;
+        double sigmaX2 = o2::mft::ioutils::DefClusError2Row, sigmaY2 = o2::mft::ioutils::DefClusError2Col; //Dummy COG errors (about half pixel size)
         if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
             sigmaX2 = dict.getErr2X(pattID); // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
             sigmaY2 = dict.getErr2Z(pattID); // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
