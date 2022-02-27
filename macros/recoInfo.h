@@ -41,7 +41,7 @@ struct AlignHitStruct {
 class Hit
 {
     public:
-        Hit() = default;
+        Hit();
         ~Hit() = default;
 
         // constructors
@@ -54,6 +54,17 @@ class Hit
             const double clusterGlobalX,
             const double clusterGlobalY,
             const double clusterGlobalZ);
+        Hit(o2::itsmft::CompClusterExt cluster,
+            o2::mft::GeometryTGeo* geom,
+            o2::itsmft::ChipMappingMFT chipMappingMFT,
+            o2::itsmft::TopologyDictionary& dict);
+
+        // convert compact clusters to 3D spacepoints into std::vector<Hit>
+
+        void convertCompactCluster(o2::itsmft::CompClusterExt c,
+                                   o2::mft::GeometryTGeo* geom,
+                                   o2::itsmft::ChipMappingMFT chipMappingMFT,
+                                   o2::itsmft::TopologyDictionary& dict);
 
         // short-named getters
 
@@ -187,6 +198,21 @@ class Hit
 };
 
 //__________________________________________________________________________
+Hit::Hit() 
+  : mSensor(0),
+    mLayer(0),
+    mDisk(0),
+    mHalf(0),
+    mIsInTrack(kFALSE),
+    mMeasuredSigmaX2(0.),
+    mMeasuredSigmaY2(0.),
+    mMeasuredSigmaZ2(0.)
+{
+    setClusterGlobalPosition(0., 0., 0.);
+    setTrackGlobalPosition(0., 0., 0.);
+}
+
+//__________________________________________________________________________
 Hit::Hit(const Int_t sensor,
          o2::itsmft::ChipMappingMFT mapping,
          const o2::math_utils::Point3D<double>& clusterGlobalPosition)
@@ -205,6 +231,16 @@ Hit::Hit(const Int_t sensor,
 {
     setSensor(sensor, mapping);
     setClusterGlobalPosition(clusterGlobalX, clusterGlobalY, clusterGlobalZ);
+    setTrackGlobalPosition(0., 0., 0.);
+}
+
+//__________________________________________________________________________
+Hit::Hit(o2::itsmft::CompClusterExt cluster,
+         o2::mft::GeometryTGeo* geom,
+         o2::itsmft::ChipMappingMFT chipMappingMFT,
+         o2::itsmft::TopologyDictionary& dict)
+{
+    convertCompactCluster(cluster, geom, chipMappingMFT, dict);
     setTrackGlobalPosition(0., 0., 0.);
 }
 
@@ -330,27 +366,25 @@ void Hit::setSensor(Int_t sensor, o2::itsmft::ChipMappingMFT mapping)
 
 
 //_________________________________________________________
-/// convert compact clusters to 3D spacepoints into std::vector<o2::BaseCluster<float>>
-void convertCompactClusters(std::vector<o2::itsmft::CompClusterExt> clusters,
-                            o2::mft::GeometryTGeo* geom,
-                            o2::itsmft::ChipMappingMFT chipMappingMFT,
-                            std::vector<Hit>& output,
-                            o2::itsmft::TopologyDictionary& dict)
+/// convert compact clusters to 3D spacepoints into std::vector<Hit>
+void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
+                                o2::mft::GeometryTGeo* geom,
+                                o2::itsmft::ChipMappingMFT chipMappingMFT,
+                                o2::itsmft::TopologyDictionary& dict)
 {
-    // inspired from Detectors/ITSMFT/MFT/tracking/src/IOUtils.cxx
-    for (auto& c : clusters) {
-        auto chipID = c.getChipID();
-        auto pattID = c.getPatternID();
-        o2::math_utils::Point3D<double> locXYZ;
-        double sigmaX2 = o2::mft::ioutils::DefClusError2Row, sigmaY2 = o2::mft::ioutils::DefClusError2Col; //Dummy COG errors (about half pixel size)
-        if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
-            sigmaX2 = dict.getErr2X(pattID); // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
-            sigmaY2 = dict.getErr2Z(pattID); // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
-            locXYZ = dict.getClusterCoordinates(c);
-        }
-        auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ; // Transformation to the local --> global
-        auto& cl3d = output.emplace_back(c.getSensorID(), chipMappingMFT, gloXYZ);
-        double cook = 1.0; // WARNING!! COOKED
-        cl3d.setMeasuredErrors(cook * sigmaX2, cook * sigmaY2, 0.);
+    // lines from Detectors/ITSMFT/MFT/tracking/src/IOUtils.cxx
+    auto chipID = c.getChipID();
+    auto pattID = c.getPatternID();
+    o2::math_utils::Point3D<double> locXYZ;
+    double sigmaX2 = o2::mft::ioutils::DefClusError2Row, sigmaY2 = o2::mft::ioutils::DefClusError2Col; //Dummy COG errors (about half pixel size)
+    if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
+        sigmaX2 = dict.getErr2X(pattID); // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
+        sigmaY2 = dict.getErr2Z(pattID); // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
+        locXYZ = dict.getClusterCoordinates(c);
     }
+    auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ; // Transformation to the local --> global
+    setSensor(c.getSensorID(), chipMappingMFT);
+    setClusterGlobalPosition(gloXYZ);
+    double cook = 1.0; // WARNING!! COOKED
+    setMeasuredErrors(cook * sigmaX2, cook * sigmaY2, 0.);
 }

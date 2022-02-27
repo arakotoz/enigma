@@ -56,7 +56,9 @@ void extractClusterInfo()
 
     for (Int_t ii = 0; ii < nEntries; ii++ ) {
         mftclusterChain.GetEntry(ii);
-        convertCompactClusters(compClusters, geom, chipMappingMFT, mftHits, dict);
+        for (auto& c : compClusters) {
+            mftHits.emplace_back(c, geom, chipMappingMFT, dict);
+        }
     }
     std::cout << "Found " << mftHits.size() << " MFT clusters" << std::endl;
     Int_t index = 0;
