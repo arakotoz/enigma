@@ -59,7 +59,7 @@ class Hit
             o2::itsmft::ChipMappingMFT chipMappingMFT,
             o2::itsmft::TopologyDictionary& dict);
 
-        // convert compact clusters to 3D spacepoints into std::vector<Hit>
+        // convert a compact cluster to 3D spacepoint stored into a Hit
 
         void convertCompactCluster(o2::itsmft::CompClusterExt c,
                                    o2::mft::GeometryTGeo* geom,
@@ -364,25 +364,29 @@ void Hit::setSensor(Int_t sensor, o2::itsmft::ChipMappingMFT mapping)
     }
 }
 
-
 //_________________________________________________________
-/// convert compact clusters to 3D spacepoints into std::vector<Hit>
 void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
                                 o2::mft::GeometryTGeo* geom,
                                 o2::itsmft::ChipMappingMFT chipMappingMFT,
                                 o2::itsmft::TopologyDictionary& dict)
 {
+    /// convert a compact cluster to 3D spacepoint stored into a Hit
     // lines from Detectors/ITSMFT/MFT/tracking/src/IOUtils.cxx
     auto chipID = c.getChipID();
     auto pattID = c.getPatternID();
     o2::math_utils::Point3D<double> locXYZ;
-    double sigmaX2 = o2::mft::ioutils::DefClusError2Row, sigmaY2 = o2::mft::ioutils::DefClusError2Col; //Dummy COG errors (about half pixel size)
+    //Dummy COG errors (about half pixel size)
+    double sigmaX2 = o2::mft::ioutils::DefClusError2Row;
+    double sigmaY2 = o2::mft::ioutils::DefClusError2Col; 
     if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
-        sigmaX2 = dict.getErr2X(pattID); // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
-        sigmaY2 = dict.getErr2Z(pattID); // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
+        // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
+        sigmaX2 = dict.getErr2X(pattID); 
+        // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
+        sigmaY2 = dict.getErr2Z(pattID); 
         locXYZ = dict.getClusterCoordinates(c);
     }
-    auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ; // Transformation to the local --> global
+    // Transformation to the local --> global
+    auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ;
     setSensor(c.getSensorID(), chipMappingMFT);
     setClusterGlobalPosition(gloXYZ);
     double cook = 1.0; // WARNING!! COOKED
