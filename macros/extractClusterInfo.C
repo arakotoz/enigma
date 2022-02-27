@@ -1,32 +1,22 @@
 #if !defined(__CLING__) || defined(__ROOTCLING__)
 
-#include <iostream>
 #include <fstream>
-#include <vector>
+#include <iostream>
 #include <string>
-#include <Rtypes.h>
-#include <TChain.h>
+#include <vector>
 
-#include <MathUtils/Cartesian.h>
+#include <TChain.h>
+#include <Rtypes.h>
 
 #include "DataFormatsITSMFT/CompCluster.h"
 #include "DataFormatsITSMFT/TopologyDictionary.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
-#include "ReconstructionDataFormats/BaseCluster.h"
-#include "MFTTracking/IOUtils.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
 
+#include "recoInfo.h"
+
 #endif
-
-using MFTCluster = o2::BaseCluster<double>;
-
-
-void convertCompactClusters(std::vector<o2::itsmft::CompClusterExt> clusters,
-                            o2::mft::GeometryTGeo* geom,
-                            std::vector<MFTCluster>& output,
-                            o2::itsmft::TopologyDictionary& dict);
-
 
 void extractClusterInfo()
 {
@@ -59,46 +49,21 @@ void extractClusterInfo()
     mftclusterChain.Add("/Users/andry/cernbox/alice/mft/pilotbeam/505713/a_raw_0110_tf_053-outdir/mftclusters.root");
 
     std::vector<o2::itsmft::CompClusterExt> compClusters, *compClustersP = &compClusters;
-    std::vector<MFTCluster> mftClusters;
+    std::vector<Hit> mftHits;
     mftclusterChain.SetBranchAddress("MFTClusterComp", &compClustersP);
     Int_t nEntries = mftclusterChain.GetEntries();
     std::cout << "Number of entries = " << nEntries << std::endl;
 
     for (Int_t ii = 0; ii < nEntries; ii++ ) {
         mftclusterChain.GetEntry(ii);
-        convertCompactClusters(compClusters, geom, mftClusters, dict);
+        convertCompactClusters(compClusters, geom, chipMappingMFT, mftHits, dict);
     }
-    std::cout << "Found " << mftClusters.size() << " MFT clusters" << std::endl;
-    std::cout << "sensor id (X, Y, Z)/(SigmaY2, SigmaYZ, SigmaZ2) cnt bits" << std::endl;
+    std::cout << "Found " << mftHits.size() << " MFT clusters" << std::endl;
     Int_t index = 0;
-    std::cout << "---> mftClusters[" << index << "]" << std::endl; 
-    std::cout << mftClusters[index] << std::endl;
-    index = mftClusters.size()-1;
-    std::cout << "---> mftClusters[" << index << "]" << std::endl; 
-    std::cout << mftClusters[index] << std::endl;
+    std::cout << "---> mftHits[" << index << "]" << std::endl; 
+    mftHits[index].print();
+    index = mftHits.size()-1;
+    std::cout << "---> mftHits[" << index << "]" << std::endl; 
+    mftHits[index].print();
 }
 
-//_________________________________________________________
-/// convert compact clusters to 3D spacepoints into std::vector<o2::BaseCluster<float>>
-void convertCompactClusters(std::vector<o2::itsmft::CompClusterExt> clusters,
-                            o2::mft::GeometryTGeo* geom,
-                            std::vector<MFTCluster>& output,
-                            o2::itsmft::TopologyDictionary& dict)
-{
-    // inspired from Detectors/ITSMFT/MFT/tracking/src/IOUtils.cxx
-    for (auto& c : clusters) {
-        auto chipID = c.getChipID();
-        auto pattID = c.getPatternID();
-        o2::math_utils::Point3D<double> locXYZ;
-        double sigmaX2 = o2::mft::ioutils::DefClusError2Row, sigmaY2 = o2::mft::ioutils::DefClusError2Col; //Dummy COG errors (about half pixel size)
-        if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
-            sigmaX2 = dict.getErr2X(pattID); // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
-            sigmaY2 = dict.getErr2Z(pattID); // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
-            locXYZ = dict.getClusterCoordinates(c);
-        }
-        auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ; // Transformation to the local --> global
-        auto& cl3d = output.emplace_back(c.getSensorID(), gloXYZ);
-        double cook = 1.0; // WARNING!! COOKED
-        cl3d.setErrors(cook * sigmaX2, cook * sigmaY2, 0);
-    }
-}
