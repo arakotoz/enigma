@@ -14,25 +14,21 @@
 #include "MFTBase/GeometryTGeo.h"
 #include "MFTTracking/IOUtils.h"
 
-struct ClusterStruct {
+struct HitStruct {
     UShort_t sensor; // sensor id
     UShort_t layer; // layer id
     UShort_t disk; // disk id
     UShort_t half; // half id
-    Bool_t isInTrack; // is attached to a track ?
+    Int_t trackIdx; // if attached to a track, track index > -1
     Double_t measuredGlobalX; // cluster x, global frame (cm)
     Double_t measuredGlobalY; // cluster y, global frame (cm)
     Double_t measuredGlobalZ; // cluster z, global frame (cm)
     Double_t measuredSigmaX2; // cluster, variance x (cm2)
     Double_t measuredSigmaY2; // cluster, variance y (cm2)
     Double_t measuredSigmaZ2; // cluster, variance z (cm2)
-};
-
-struct AlignHitStruct {
-    UShort_t sensor; // sensor id
-    UShort_t layer; // layer id        
-    UShort_t disk; // disk id
-    UShort_t half; // half id
+    Double_t recoGlobalX; // track x, global frame (cm)
+    Double_t recoGlobalY; // track y, global frame (cm)
+    Double_t recoGlobalZ; // track z, global frame (cm)
     Double_t residualX; // (track x - cluster x), global frame (cm)
     Double_t residualY; // (track y - cluster y), global frame (cm)
     Double_t residualZ; // (track z - cluster z), global frame (cm)
@@ -76,7 +72,7 @@ class Hit
         double clusterSigmaZ2() const { return mMeasuredSigmaZ2; }
         UShort_t disk() const { return mDisk; }
         UShort_t half() const { return mHalf; }
-        Bool_t isInTrack() const { return mIsInTrack; }
+        Bool_t isInTrack() const { return (mTrackIdx > -1) ? kTRUE : kFALSE; }
         UShort_t layer() const { return mLayer; }
         double residualX() const; // (cm)
         double residualY() const; // (cm)
@@ -85,10 +81,10 @@ class Hit
         double trackGlobalX() const { return mGlobalRecoPosition.X(); }
         double trackGlobalY() const { return mGlobalRecoPosition.Y(); }
         double trackGlobalZ() const { return mGlobalRecoPosition.Z(); }
+        Int_t trackIdx() const { return mTrackIdx; }
 
         // getters
 
-        AlignHitStruct getAlignHitStruct() const;
         o2::math_utils::Point3D<double> getClusterGlobalXYZ() const
         { 
             return mGlobalMeasuredPosition; 
@@ -97,7 +93,7 @@ class Hit
         { 
             return mGlobalMeasuredPosition; 
         }
-        ClusterStruct getClusterStruct() const;
+        HitStruct getHitStruct() const;
         o2::math_utils::Point3D<double> getTrackGlobalXYZ() const
         { 
             return mGlobalRecoPosition; 
@@ -137,7 +133,6 @@ class Hit
         {
             mGlobalMeasuredPosition.SetZ(z);
         }
-        void setIsInTrack(){ mIsInTrack = kTRUE; }
         void setMeasuredErrors(double sx2, double sy2, double sz2)
         {
             setMeasuredSigmaX2(sx2);
@@ -172,6 +167,7 @@ class Hit
         {
             mGlobalRecoPosition.SetZ(z);
         }
+        void setTrackIdx(const Int_t idx){ mTrackIdx = idx; }
 
     protected:
         // sensor id
@@ -182,8 +178,8 @@ class Hit
         UShort_t mDisk = 0;
         // half id
         UShort_t mHalf = 0;
-        // does this hit belong to a track ?
-        Bool_t mIsInTrack = kFALSE;
+        // track index 
+        Int_t mTrackIdx = -1;
         // Cartesian position (cm, in Global frame) of the reconstructed track
         // analytically propagated to the z position of the cluster
         o2::math_utils::Point3D<double> mGlobalRecoPosition; 
@@ -203,7 +199,7 @@ Hit::Hit()
     mLayer(0),
     mDisk(0),
     mHalf(0),
-    mIsInTrack(kFALSE),
+    mTrackIdx(-1),
     mMeasuredSigmaX2(0.),
     mMeasuredSigmaY2(0.),
     mMeasuredSigmaZ2(0.)
@@ -251,10 +247,6 @@ double Hit::residualX() const
     double residual = 0;
     if (isInTrack()) {
         residual = mGlobalRecoPosition.X() - mGlobalMeasuredPosition.X();
-    } else {
-        std::cout << "Hit::residualX() = 0 - "
-                  << "WARNING, cluster NOT associated to a track !!!" 
-                  << std::endl;
     }
     return residual;
 }
@@ -266,10 +258,6 @@ double Hit::residualY() const
     double residual = 0;
     if (isInTrack()) {
         residual = mGlobalRecoPosition.Y() - mGlobalMeasuredPosition.Y();
-    } else {
-        std::cout << "Hit::residualY() = 0 - "
-                  << "WARNING, cluster NOT associated to a track !!!" 
-                  << std::endl;
     }
     return residual;
 }
@@ -281,44 +269,32 @@ double Hit::residualZ() const
     double residual = 0;
     if (isInTrack()) {
         residual = mGlobalRecoPosition.Z() - mGlobalMeasuredPosition.Z();
-    } else {
-        std::cout << "Hit::residualZ() = 0 - "
-                  << "WARNING, cluster NOT associated to a track !!!" 
-                  << std::endl;
     }
     return residual;
 }
 
 //__________________________________________________________________________
-AlignHitStruct Hit::getAlignHitStruct() const
+HitStruct Hit::getHitStruct() const
 {
-    AlignHitStruct hit{};
+    HitStruct hit{};
     hit.sensor = sensor();
     hit.layer = layer();
     hit.disk = disk();
     hit.half = half();
+    hit.trackIdx = trackIdx();
+    hit.measuredGlobalX = clusterGlobalX();
+    hit.measuredGlobalY = clusterGlobalY();
+    hit.measuredGlobalZ = clusterGlobalZ();
+    hit.measuredSigmaX2 = clusterSigmaX2();
+    hit.measuredSigmaY2 = clusterSigmaY2();
+    hit.measuredSigmaY2 = clusterSigmaZ2();
+    hit.recoGlobalX = trackGlobalX(); 
+    hit.recoGlobalY = trackGlobalY(); 
+    hit.recoGlobalZ = trackGlobalY(); 
     hit.residualX = residualX();
-    hit.residualY = residualY();
-    hit.residualZ = residualZ();
+    hit.residualY = residualY(); 
+    hit.residualZ = residualZ(); 
     return hit;
-}
-
-//__________________________________________________________________________
-ClusterStruct Hit::getClusterStruct() const
-{
-    ClusterStruct cluster{};
-    cluster.sensor = sensor();
-    cluster.layer = layer();
-    cluster.disk = disk();
-    cluster.half = half();
-    cluster.isInTrack = isInTrack();
-    cluster.measuredGlobalX = clusterGlobalX();
-    cluster.measuredGlobalY = clusterGlobalY();
-    cluster.measuredGlobalZ = clusterGlobalZ();
-    cluster.measuredSigmaX2 = clusterSigmaX2();
-    cluster.measuredSigmaY2 = clusterSigmaY2();
-    cluster.measuredSigmaY2 = clusterSigmaZ2();
-    return cluster;
 }
 
 //__________________________________________________________________________
@@ -338,13 +314,15 @@ void Hit::print() const
               << "err2 ("
               << clusterSigmaX2() << ", "
               << clusterSigmaY2() << ", "
-              << clusterSigmaZ2() << ") "
-              << "track ("
+              << clusterSigmaZ2() << ") ";
+    if ( isInTrack() ) {
+        std::cout << "track " << trackIdx() << " ("
               << std::showpos << std::setprecision(3)
               << trackGlobalX() << ", "
               << trackGlobalY() << ", "
-              << trackGlobalZ() << ") "
-              << std::noshowpos << std::setprecision(6)
+              << trackGlobalZ() << ") ";
+    }
+    std::cout << std::noshowpos << std::setprecision(6)
               << std::endl;
 }
 

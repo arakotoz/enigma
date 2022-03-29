@@ -10,6 +10,7 @@
 
 #include "DataFormatsITSMFT/CompCluster.h"
 #include "DataFormatsITSMFT/TopologyDictionary.h"
+#include "DataFormatsMFT/TrackMFT.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
@@ -43,7 +44,7 @@ void extractClusterInfo()
 
     o2::itsmft::ChipMappingMFT chipMappingMFT;
 
-    // chain
+    // cluster chain
 
     TChain mftclusterChain("o2sim");
     mftclusterChain.Add("/Users/andry/cernbox/alice/mft/pilotbeam/505713/a_raw_0110_tf_053-outdir/mftclusters.root");
@@ -51,21 +52,81 @@ void extractClusterInfo()
     std::vector<o2::itsmft::CompClusterExt> compClusters, *compClustersP = &compClusters;
     std::vector<Hit> mftHits;
     mftclusterChain.SetBranchAddress("MFTClusterComp", &compClustersP);
-    Int_t nEntries = mftclusterChain.GetEntries();
-    std::cout << "Number of entries = " << nEntries << std::endl;
+    Int_t nEntriesClusterChain = mftclusterChain.GetEntries();
+    std::cout << "Number of cluster entries = " << nEntriesClusterChain << std::endl;
 
+    // track chain
+
+    TChain mfttrackChain("o2sim");
+    mfttrackChain.Add("/Users/andry/cernbox/alice/mft/pilotbeam/505713/a_raw_0110_tf_053-outdir/mfttracks.root");
+
+    std::vector<o2::mft::TrackMFT> mftTracks, *mftTracksP = &mftTracks;
+    std::vector<int> trackClusterRefs, *trackClusterRefsP = &trackClusterRefs;
+    mfttrackChain.SetBranchAddress("MFTTrack", &mftTracksP);
+    mfttrackChain.SetBranchAddress("MFTTrackClusIdx", &trackClusterRefsP);
+    Int_t nEntriesTrackChain = mfttrackChain.GetEntries();
+    std::cout << "Number of track entries = " << nEntriesTrackChain << std::endl;
+
+    assert(nEntriesClusterChain == nEntriesTrackChain);
+    Int_t nEntries = nEntriesClusterChain;
+
+    // loop on both chains
+
+    Int_t trackIdx = 0;
+    Int_t nclsTotal = 0;
+    Int_t nclsInTracks = 0;
     for (Int_t ii = 0; ii < nEntries; ii++ ) {
+
         mftclusterChain.GetEntry(ii);
+        mfttrackChain.GetEntry(ii);
+
+        // Cache compact clusters
+
+        mftHits.clear();
+        mftHits.reserve(compClusters.size());
+
+        // loop on clusters
+
         for (auto& c : compClusters) {
             mftHits.emplace_back(c, geom, chipMappingMFT, dict);
         }
+
+        // loop on tracks
+
+        for (auto& track : mftTracks) {
+            auto ncls = track.getNumberOfPoints();
+            auto offset = track.getExternalClusterIndexOffset();
+            for (auto icls = 0; icls < ncls; icls++) {
+                assert(offset+icls < compClusters.size());
+                track.propagateParamToZlinear(mftHits[offset+icls].clusterGlobalZ());
+                mftHits[offset+icls].setTrackGlobalPosition(
+                    track.getX(),
+                    track.getY(),
+                    track.getZ()
+                );
+                mftHits[offset+icls].setTrackIdx(trackIdx);
+            }
+            trackIdx++;
+            nclsInTracks += ncls;
+        }
+
+        if (ii % 10 == 0) {
+            std::cout << "###### Entry " << ii 
+                      << " found " << mftHits.size() 
+                      << " MFT clusters" << std::endl;
+            Int_t index = 0;
+            std::cout << "---> mftHits[" << index << "]" << std::endl; 
+            mftHits[index].print();
+            index = mftHits.size()-1;
+            std::cout << "---> mftHits[" << index << "]" << std::endl; 
+            mftHits[index].print();    
+        }
+        nclsTotal += mftHits.size();
     }
-    std::cout << "Found " << mftHits.size() << " MFT clusters" << std::endl;
-    Int_t index = 0;
-    std::cout << "---> mftHits[" << index << "]" << std::endl; 
-    mftHits[index].print();
-    index = mftHits.size()-1;
-    std::cout << "---> mftHits[" << index << "]" << std::endl; 
-    mftHits[index].print();
+
+    std::cout << "============= SUMMARY ============= " << std::endl;
+    std::cout << "Total nb clusters : \t" <<  nclsTotal << std::endl;
+    std::cout << "Total nb of tracks : \t" << trackIdx+1 << std::endl;
+    std::cout << "Total nb clusters in tracks: \t" <<  nclsInTracks << std::endl;
 }
 
