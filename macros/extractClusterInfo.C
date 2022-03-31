@@ -19,11 +19,15 @@
 
 #endif
 
-void extractClusterInfo()
+// root -l
+// .L ~/cernbox/alice/enigma/macros/extractClusterInfo.C++
+// extractClusterInfo()
+
+void extractClusterInfo(const Bool_t doVerbosePrint = true, const Int_t fraction = 10)
 {
     // geometry
 
-    const bool applyMisalignment = true;
+    const bool applyMisalignment = false;
     const bool preferAlignedFile = true; // o2sim_geometry-aligned.root
     o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
     o2::mft::GeometryTGeo *geom = o2::mft::GeometryTGeo::Instance();
@@ -70,11 +74,16 @@ void extractClusterInfo()
     assert(nEntriesClusterChain == nEntriesTrackChain);
     Int_t nEntries = nEntriesClusterChain;
 
+    // output tree
+
+
+
     // loop on both chains
 
     Int_t trackIdx = 0;
     Int_t nclsTotal = 0;
     Int_t nclsInTracks = 0;
+    Int_t nTrackCA = 0;
     for (Int_t ii = 0; ii < nEntries; ii++ ) {
 
         mftclusterChain.GetEntry(ii);
@@ -106,11 +115,14 @@ void extractClusterInfo()
                 );
                 mftHits[offset+icls].setTrackIdx(trackIdx);
             }
+            if ( track.isCA() ) {
+                nTrackCA++;
+            }
             trackIdx++;
             nclsInTracks += ncls;
         }
 
-        if (ii % 10 == 0) {
+        if ( (ii % fraction == 0) && (doVerbosePrint) ) {
             std::cout << "###### Entry " << ii 
                       << " found " << mftHits.size() 
                       << " MFT clusters" << std::endl;
@@ -121,12 +133,22 @@ void extractClusterInfo()
             std::cout << "---> mftHits[" << index << "]" << std::endl; 
             mftHits[index].print();    
         }
+
+        // fill output tree
+
+        for (auto hit : mftHits) {
+            HitStruct hitInfo = hit.getHitStruct();
+
+        }
+
         nclsTotal += mftHits.size();
     }
 
     std::cout << "============= SUMMARY ============= " << std::endl;
-    std::cout << "Total nb clusters : \t" <<  nclsTotal << std::endl;
-    std::cout << "Total nb of tracks : \t" << trackIdx+1 << std::endl;
+    std::cout << "Total nb clusters : \t\t" <<  nclsTotal << std::endl;
+    std::cout << "Total nb of tracks : \t\t" << trackIdx+1 << std::endl;
     std::cout << "Total nb clusters in tracks: \t" <<  nclsInTracks << std::endl;
+    std::cout << "Total nb of CA tracks : \t" << nTrackCA << std::endl;
+
 }
 
