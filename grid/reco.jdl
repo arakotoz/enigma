@@ -1,0 +1,47 @@
+User = "arakotoz";
+JobTag = {
+  "comment:Automatically generated analysis JDL"
+};
+Packages = {
+  "VO_ALICE@O2PDPSuite::nightly-20220323-1"
+};
+Executable = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/reco.sh";
+InputFile = {
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/input/o2sim_geometry.root",
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/input/o2sim_geometry-aligned.root",
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/input/o2sim_grp.root",
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/input/ctf_dictionary.root",
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/input/MFTdictionary.bin"
+};
+InputDataList = "wn.xml";
+InputDataListFormat = "xml-single";
+InputDataCollection = {
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/$2/$1/$1.xml,nodownload"
+};
+Split = "file";
+ValidationCommand = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/reco_validation.sh";
+OutputDir = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/$2/$1/output/#alien_counter_03i#";
+Output = {
+  "log_archive.zip:log*,std*@disk=1",
+  "root_archive.zip:mfttracks.root,mftclusters.root@disk=2"
+};
+
+OutputErrorE = {
+"log_archive.zip:log*,std*@disk=2"
+};
+
+#Requirements = member(other.GridPartitions,"multicore_8");
+ 
+TTL = $3;
+Price = 2;
+#MemorySize = "32GB";
+#WorkDirectorySize = {
+#  "5000MB"
+#};
+JDLVariables = {
+  "Packages",
+  "OutputDir",
+  "CPUCores"
+};
+CPUCores = "1";
+Type = "Job";
