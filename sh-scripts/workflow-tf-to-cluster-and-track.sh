@@ -34,7 +34,7 @@ function go-tf-to-cluster-track() {
     #      go-tf-to-cluster-track tflist
     inputfile=${@}
     prefix=${@}
-    RECO_OPTIONS="MFTTracking.FullClusterScan=false; MFTTracking.MinTrackPointsLTF=5; MFTTracking.MinTrackStationsLTF=4; MFTTracking.LTFclsRCut=0.2; MFTTracking.LTFseed2BinWin=3; MFTTracking.MinTrackStationsCA=4; MFTTracking.ROADclsRCut=0.04; MFTTracking.MinTrackPointsCA=5;MFTAlpideParam.roFrameLengthInBC=198;"
+    RECO_OPTIONS="MFTTracking.FullClusterScan=true; MFTTracking.MinTrackPointsLTF=5; MFTTracking.MinTrackStationsLTF=4; MFTTracking.LTFclsRCut=0.2; MFTTracking.LTFseed2BinWin=3; MFTTracking.MinTrackStationsCA=4; MFTTracking.ROADclsRCut=0.04; MFTTracking.MinTrackPointsCA=5;MFTAlpideParam.roFrameLengthInBC=198;"
     OUTDIR=${prefix}-outdir
     LOG=${OUTDIR}/tf-to-cluster-track.log
     SHMSIZE=$(( 8 << 30 ))
@@ -74,7 +74,7 @@ function go-tf-to-cluster-track-b0() {
     #      go-tf-to-cluster-track-b0 tflist
     inputfile=${@}
     prefix=${@}
-    RECO_OPTIONS="MFTTracking.forceZeroField=true; MFTTracking.FullClusterScan=false; MFTTracking.MinTrackPointsLTF=5; MFTTracking.MinTrackStationsLTF=4; MFTTracking.LTFclsRCut=0.2; MFTTracking.LTFseed2BinWin=3; MFTTracking.MinTrackStationsCA=4; MFTTracking.ROADclsRCut=0.04; MFTTracking.MinTrackPointsCA=5;MFTAlpideParam.roFrameLengthInBC=198;"
+    RECO_OPTIONS="MFTTracking.forceZeroField=true; MFTTracking.FullClusterScan=true; MFTTracking.MinTrackPointsLTF=5; MFTTracking.MinTrackStationsLTF=4; MFTTracking.LTFclsRCut=0.2; MFTTracking.LTFseed2BinWin=3; MFTTracking.MinTrackStationsCA=4; MFTTracking.ROADclsRCut=0.04; MFTTracking.MinTrackPointsCA=5;MFTAlpideParam.roFrameLengthInBC=198;"
     OUTDIR=${prefix}-outdir
     LOG=${OUTDIR}/tf-to-cluster-track-b0.log
     SHMSIZE=$(( 8 << 30 ))
