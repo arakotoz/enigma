@@ -1,11 +1,16 @@
 #if !defined(__CLING__) || defined(__ROOTCLING__)
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include <TChain.h>
+#include <TFile.h>
+#include<TString.h>
+#include <TTree.h>
 #include <Rtypes.h>
 
 #include "DataFormatsITSMFT/CompCluster.h"
@@ -23,7 +28,9 @@
 // .L ~/cernbox/alice/enigma/macros/extractClusterInfo.C++
 // extractClusterInfo()
 
-void extractClusterInfo(const Bool_t doVerbosePrint = true, const Int_t fraction = 10)
+void extractClusterInfo(const Bool_t doVerbosePrint = true, 
+                        const Int_t printPeriod = 10, 
+                        const Int_t fileStop = 4315)
 {
     // geometry
 
@@ -48,21 +55,31 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true, const Int_t fraction
 
     o2::itsmft::ChipMappingMFT chipMappingMFT;
 
-    // cluster chain
+    // cluster and track chains
 
+    std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/prealigned";
+    const Int_t fileStart = 1;
     TChain mftclusterChain("o2sim");
-    mftclusterChain.Add("/Users/andry/cernbox/alice/mft/pilotbeam/505713/a_raw_0110_tf_053-outdir/mftclusters.root");
+    TChain mfttrackChain("o2sim");
+    for (Int_t ii = fileStart; ii <= fileStop; ii++) {
+        std::stringstream ss;
+        if (ii < 100) {
+            ss << generalPath << "/" 
+               << std::setw(3) << std::setfill('0') << ii;
+        } else {
+            ss << generalPath << "/" << ii;
+        }
+        std::string filePath = ss.str();
+        mftclusterChain.Add(Form("%s/mftclusters.root", filePath.c_str()));
+        mfttrackChain.Add(Form("%s/mfttracks.root", filePath.c_str()));
+    }
+    std::cout << "Number of files per chain = " << fileStop << std::endl;
 
     std::vector<o2::itsmft::CompClusterExt> compClusters, *compClustersP = &compClusters;
     std::vector<Hit> mftHits;
     mftclusterChain.SetBranchAddress("MFTClusterComp", &compClustersP);
     Int_t nEntriesClusterChain = mftclusterChain.GetEntries();
     std::cout << "Number of cluster entries = " << nEntriesClusterChain << std::endl;
-
-    // track chain
-
-    TChain mfttrackChain("o2sim");
-    mfttrackChain.Add("/Users/andry/cernbox/alice/mft/pilotbeam/505713/a_raw_0110_tf_053-outdir/mfttracks.root");
 
     std::vector<o2::mft::TrackMFT> mftTracks, *mftTracksP = &mftTracks;
     std::vector<int> trackClusterRefs, *trackClusterRefsP = &trackClusterRefs;
@@ -76,7 +93,28 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true, const Int_t fraction
 
     // output tree
 
+    TFile hfile(Form("%s/outtree.root", generalPath.c_str()), "RECREATE");
 
+    HitStruct hitInfo;
+
+	TTree* tree = new TTree("recoInfo","the reco info tree");
+	tree->Branch("sensor", &hitInfo.sensor, "sensor/s");
+	tree->Branch("layer", &hitInfo.layer, "layer/s");
+	tree->Branch("disk", &hitInfo.disk, "disk/s");
+	tree->Branch("half", &hitInfo.half, "half/s");
+	tree->Branch("trackIdx", &hitInfo.trackIdx, "trackIdx/I");
+	tree->Branch("measuredGlobalX", &hitInfo.measuredGlobalX, "measuredGlobalX/D");
+	tree->Branch("measuredGlobalY", &hitInfo.measuredGlobalY, "measuredGlobalY/D");
+	tree->Branch("measuredGlobalZ", &hitInfo.measuredGlobalZ, "measuredGlobalZ/D");
+	tree->Branch("measuredSigmaX2", &hitInfo.measuredSigmaX2, "measuredSigmaX2/D");
+	tree->Branch("measuredSigmaY2", &hitInfo.measuredSigmaY2, "measuredSigmaY2/D");
+	tree->Branch("measuredSigmaZ2", &hitInfo.measuredSigmaZ2, "measuredSigmaZ2/D");
+	tree->Branch("recoGlobalX", &hitInfo.recoGlobalX, "recoGlobalX/D");
+	tree->Branch("recoGlobalY", &hitInfo.recoGlobalY, "recoGlobalY/D");
+	tree->Branch("recoGlobalZ", &hitInfo.recoGlobalZ, "recoGlobalZ/D");
+	tree->Branch("residualX", &hitInfo.residualX, "residualX/D");
+	tree->Branch("residualY", &hitInfo.residualY, "residualY/D");
+	tree->Branch("residualZ", &hitInfo.residualZ, "residualZ/D");
 
     // loop on both chains
 
@@ -122,7 +160,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true, const Int_t fraction
             nclsInTracks += ncls;
         }
 
-        if ( (ii % fraction == 0) && (doVerbosePrint) ) {
+        if ( (ii % printPeriod == 0) && (doVerbosePrint) ) {
             std::cout << "###### Entry " << ii 
                       << " found " << mftHits.size() 
                       << " MFT clusters" << std::endl;
@@ -136,13 +174,17 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true, const Int_t fraction
 
         // fill output tree
 
-        for (auto hit : mftHits) {
-            HitStruct hitInfo = hit.getHitStruct();
-
+        for (auto currentHit : mftHits) {
+            hitInfo = currentHit.getHitStruct();
+            tree->Fill();
         }
 
         nclsTotal += mftHits.size();
     }
+
+    // save output tree
+
+    tree->Write();
 
     std::cout << "============= SUMMARY ============= " << std::endl;
     std::cout << "Total nb clusters : \t\t" <<  nclsTotal << std::endl;
