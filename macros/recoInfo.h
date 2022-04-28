@@ -6,6 +6,7 @@
 #include <TObject.h>
 #include <Rtypes.h>
 
+#include "DataFormatsITSMFT/ClusterPattern.h"
 #include "DataFormatsITSMFT/CompCluster.h"
 #include "DataFormatsITSMFT/TopologyDictionary.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
@@ -52,6 +53,7 @@ class Hit
             const double clusterGlobalY,
             const double clusterGlobalZ);
         Hit(o2::itsmft::CompClusterExt cluster,
+            std::vector<unsigned char>::iterator& pattIt,
             o2::mft::GeometryTGeo* geom,
             o2::itsmft::ChipMappingMFT chipMappingMFT,
             o2::itsmft::TopologyDictionary& dict,
@@ -60,6 +62,7 @@ class Hit
         // convert a compact cluster to 3D spacepoint stored into a Hit
 
         void convertCompactCluster(o2::itsmft::CompClusterExt c,
+                                   std::vector<unsigned char>::iterator& pattIt,
                                    o2::mft::GeometryTGeo* geom,
                                    o2::itsmft::ChipMappingMFT chipMappingMFT,
                                    o2::itsmft::TopologyDictionary& dict);
@@ -242,6 +245,7 @@ Hit::Hit(const Int_t sensor,
 
 //__________________________________________________________________________
 Hit::Hit(o2::itsmft::CompClusterExt cluster,
+         std::vector<unsigned char>::iterator& pattIt,
          o2::mft::GeometryTGeo* geom,
          o2::itsmft::ChipMappingMFT chipMappingMFT,
          o2::itsmft::TopologyDictionary& dict,
@@ -250,7 +254,7 @@ Hit::Hit(o2::itsmft::CompClusterExt cluster,
     setTrackGlobalPosition(0., 0., 0.);
     setMeasuredErrors(0., 0., 0.);
     setRofIdx(rof);
-    convertCompactCluster(cluster, geom, chipMappingMFT, dict);
+    convertCompactCluster(cluster, pattIt, geom, chipMappingMFT, dict);
 }
 
 //__________________________________________________________________________
@@ -358,6 +362,7 @@ void Hit::setSensor(Int_t sensor, o2::itsmft::ChipMappingMFT mapping)
 
 //_________________________________________________________
 void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
+                                std::vector<unsigned char>::iterator& pattIt,
                                 o2::mft::GeometryTGeo* geom,
                                 o2::itsmft::ChipMappingMFT chipMappingMFT,
                                 o2::itsmft::TopologyDictionary& dict)
@@ -375,9 +380,17 @@ void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
         sigmaX2 = dict.getErr2X(pattID); 
         // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
         sigmaY2 = dict.getErr2Z(pattID); 
-        locXYZ = dict.getClusterCoordinates(c);
+        if (!dict.isGroup(pattID)) {
+            locXYZ = dict.getClusterCoordinates(c);
+        } else {
+            o2::itsmft::ClusterPattern cPattern(pattIt);
+            locXYZ = dict.getClusterCoordinates(c, cPattern);
+        }
+    } else {
+        o2::itsmft::ClusterPattern cPattern(pattIt);
+        locXYZ = dict.getClusterCoordinates(c, cPattern, false);
     }
-    // Transformation to the local --> global
+    // Transformation local --> global coordinates
     auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ;
     setSensor(c.getSensorID(), chipMappingMFT);
     setClusterGlobalPosition(gloXYZ);
