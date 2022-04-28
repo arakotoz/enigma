@@ -1,5 +1,6 @@
 #if !defined(__CLING__) || defined(__ROOTCLING__)
 
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -30,12 +31,15 @@
 
 void extractClusterInfo(const Bool_t doVerbosePrint = true, 
                         const Int_t printPeriod = 10, 
-                        const Int_t fileStop = 4315)
+                        const Int_t fileStop = 4315,
+                        const bool preferAlignedFile = true,
+                        const bool keepClustersInTracksOnly = true
+                        )
 {
+    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
     // geometry
 
     const bool applyMisalignment = false;
-    const bool preferAlignedFile = true; // o2sim_geometry-aligned.root
     o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
     o2::mft::GeometryTGeo *geom = o2::mft::GeometryTGeo::Instance();
     geom->fillMatrixCache(o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L, o2::math_utils::TransformType::L2G));
@@ -57,7 +61,16 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
     // cluster and track chains
 
-    std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/prealigned";
+    std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/";
+    std::string alignStatus = "";
+    if (preferAlignedFile || applyMisalignment) {
+        alignStatus = "prealigned";
+    } else {
+        alignStatus = "idealgeo";
+    }
+    generalPath += alignStatus;
+
+
     const Int_t fileStart = 1;
     TChain mftclusterChain("o2sim");
     TChain mfttrackChain("o2sim");
@@ -76,8 +89,10 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     std::cout << "Number of files per chain = " << fileStop << std::endl;
 
     std::vector<o2::itsmft::CompClusterExt> compClusters, *compClustersP = &compClusters;
+    std::vector<unsigned char> clusterPatterns, *clusterPatternsP = &clusterPatterns;
     std::vector<Hit> mftHits;
     mftclusterChain.SetBranchAddress("MFTClusterComp", &compClustersP);
+    mftclusterChain.SetBranchAddress("MFTClusterPatt", &clusterPatternsP);
     Int_t nEntriesClusterChain = mftclusterChain.GetEntries();
     std::cout << "Number of cluster entries = " << nEntriesClusterChain << std::endl;
 
@@ -123,6 +138,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     Int_t nclsTotal = 0;
     Int_t nclsInTracks = 0;
     Int_t nTrackCA = 0;
+
     for (Int_t ii = 0; ii < nRof; ii++ ) {
 
         mftclusterChain.GetEntry(ii);
@@ -132,11 +148,12 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
         mftHits.clear();
         mftHits.reserve(compClusters.size());
+        std::vector<unsigned char>::iterator pattIt = clusterPatterns.begin();
 
         // loop on clusters
 
         for (auto& c : compClusters) {
-            mftHits.emplace_back(c, geom, chipMappingMFT, dict, ii);
+            mftHits.emplace_back(c, pattIt, geom, chipMappingMFT, dict, ii);
         }
 
         // loop on tracks
@@ -161,18 +178,18 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
             nclsInTracks += ncls;
         }
 
-        if ( (ii % printPeriod == 0) && (doVerbosePrint) ) {
-            std::cout << "###### ROF " << ii 
+        if ((ii % (nRof/printPeriod) == 0) && doVerbosePrint) {
+            std::cout << "\n###### ROF " << ii 
                       << " found " << mftHits.size() 
                       << " MFT clusters, " 
                       << mftTracks.size() 
                       << " MFT tracks"
                       << std::endl;
             Int_t index = 0;
-            std::cout << "---> mftHits[" << index << "]" << std::endl; 
+            std::cout << "\t mftHits[" << index << "]\t: " ; 
             mftHits[index].print();
             index = mftHits.size()-1;
-            std::cout << "---> mftHits[" << index << "]" << std::endl; 
+            std::cout << "\t mftHits[" << index << "]\t: " ; 
             mftHits[index].print();    
         }
 
@@ -180,7 +197,13 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
         for (auto currentHit : mftHits) {
             hitInfo = currentHit.getHitStruct();
-            tree->Fill();
+            if (keepClustersInTracksOnly) {
+                if (currentHit.isInTrack()) {
+                    tree->Fill();
+                }
+            } else {
+                tree->Fill();
+            }
         }
 
         nclsTotal += mftHits.size();
@@ -190,11 +213,17 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
     tree->Write();
 
+    std::chrono::steady_clock::time_point stop_time =  std::chrono::steady_clock::now();
+
     std::cout << "============= SUMMARY ============= " << std::endl;
     std::cout << "Total nb clusters : \t\t" <<  nclsTotal << std::endl;
     std::cout << "Total nb of tracks : \t\t" << trackIdx+1 << std::endl;
     std::cout << "Total nb clusters in tracks: \t" <<  nclsInTracks << std::endl;
     std::cout << "Total nb of CA tracks : \t" << nTrackCA << std::endl;
+    std::cout << "----------------------------------- " << endl;
+    std::cout << "Execution time: \t\t" 
+              << std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time).count()
+              << " seconds" << endl;
 
 }
 
