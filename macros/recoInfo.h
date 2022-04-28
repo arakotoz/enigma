@@ -15,6 +15,7 @@
 #include "MFTTracking/IOUtils.h"
 
 struct HitStruct {
+    UInt_t rofIdx; // readout frame index
     UShort_t sensor; // sensor id
     UShort_t layer; // layer id
     UShort_t disk; // disk id
@@ -53,7 +54,8 @@ class Hit
         Hit(o2::itsmft::CompClusterExt cluster,
             o2::mft::GeometryTGeo* geom,
             o2::itsmft::ChipMappingMFT chipMappingMFT,
-            o2::itsmft::TopologyDictionary& dict);
+            o2::itsmft::TopologyDictionary& dict,
+            const UInt_t rof = 0);
 
         // convert a compact cluster to 3D spacepoint stored into a Hit
 
@@ -77,6 +79,7 @@ class Hit
         double residualX() const; // (cm)
         double residualY() const; // (cm)
         double residualZ() const; // (cm)
+        UInt_t rofIdx() const { return mRofIdx; }
         UShort_t sensor() const { return mSensor; }
         double trackGlobalX() const { return mGlobalRecoPosition.X(); }
         double trackGlobalY() const { return mGlobalRecoPosition.Y(); }
@@ -142,6 +145,7 @@ class Hit
         void setMeasuredSigmaX2(double v) { mMeasuredSigmaX2 = v; }
         void setMeasuredSigmaY2(double v) { mMeasuredSigmaY2 = v; }
         void setMeasuredSigmaZ2(double v) { mMeasuredSigmaZ2 = v; }
+        void setRofIdx(const UInt_t idx){ mRofIdx = idx; }
         void setSensor(Int_t sensor, o2::itsmft::ChipMappingMFT mapping);
         void setTrackGlobalPosition(
             const o2::math_utils::Point3D<double>& position)
@@ -170,6 +174,8 @@ class Hit
         void setTrackIdx(const Int_t idx){ mTrackIdx = idx; }
 
     protected:
+        // readout frame index
+        UInt_t mRofIdx = 0;
         // sensor id
         UShort_t mSensor = 0;
         // layer id
@@ -195,7 +201,8 @@ class Hit
 
 //__________________________________________________________________________
 Hit::Hit() 
-  : mSensor(0),
+  : mRofIdx(0),
+    mSensor(0),
     mLayer(0),
     mDisk(0),
     mHalf(0),
@@ -206,6 +213,7 @@ Hit::Hit()
 {
     setClusterGlobalPosition(0., 0., 0.);
     setTrackGlobalPosition(0., 0., 0.);
+    setMeasuredErrors(0., 0., 0.);
 }
 
 //__________________________________________________________________________
@@ -216,6 +224,7 @@ Hit::Hit(const Int_t sensor,
     setSensor(sensor, mapping);
     setClusterGlobalPosition(clusterGlobalPosition);
     setTrackGlobalPosition(0., 0., 0.);
+    setMeasuredErrors(0., 0., 0.);
 }
 
 //__________________________________________________________________________
@@ -228,16 +237,20 @@ Hit::Hit(const Int_t sensor,
     setSensor(sensor, mapping);
     setClusterGlobalPosition(clusterGlobalX, clusterGlobalY, clusterGlobalZ);
     setTrackGlobalPosition(0., 0., 0.);
+    setMeasuredErrors(0., 0., 0.);
 }
 
 //__________________________________________________________________________
 Hit::Hit(o2::itsmft::CompClusterExt cluster,
          o2::mft::GeometryTGeo* geom,
          o2::itsmft::ChipMappingMFT chipMappingMFT,
-         o2::itsmft::TopologyDictionary& dict)
+         o2::itsmft::TopologyDictionary& dict,
+         const UInt_t rof)
 {
-    convertCompactCluster(cluster, geom, chipMappingMFT, dict);
     setTrackGlobalPosition(0., 0., 0.);
+    setMeasuredErrors(0., 0., 0.);
+    setRofIdx(rof);
+    convertCompactCluster(cluster, geom, chipMappingMFT, dict);
 }
 
 //__________________________________________________________________________
@@ -277,6 +290,7 @@ double Hit::residualZ() const
 HitStruct Hit::getHitStruct() const
 {
     HitStruct hit{};
+    hit.rofIdx = rofIdx();
     hit.sensor = sensor();
     hit.layer = layer();
     hit.disk = disk();

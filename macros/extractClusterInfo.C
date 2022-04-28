@@ -89,15 +89,16 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     std::cout << "Number of track entries = " << nEntriesTrackChain << std::endl;
 
     assert(nEntriesClusterChain == nEntriesTrackChain);
-    Int_t nEntries = nEntriesClusterChain;
+    Int_t nRof = nEntriesClusterChain;
 
     // output tree
 
-    TFile hfile(Form("%s/outtree.root", generalPath.c_str()), "RECREATE");
+    TFile hfile(Form("%s/outtree.root", generalPath.c_str()), "recreate");
 
     HitStruct hitInfo;
 
 	TTree* tree = new TTree("recoInfo","the reco info tree");
+    tree->Branch("rofIdx", &hitInfo.rofIdx, "rofIdx/i");
 	tree->Branch("sensor", &hitInfo.sensor, "sensor/s");
 	tree->Branch("layer", &hitInfo.layer, "layer/s");
 	tree->Branch("disk", &hitInfo.disk, "disk/s");
@@ -122,7 +123,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     Int_t nclsTotal = 0;
     Int_t nclsInTracks = 0;
     Int_t nTrackCA = 0;
-    for (Int_t ii = 0; ii < nEntries; ii++ ) {
+    for (Int_t ii = 0; ii < nRof; ii++ ) {
 
         mftclusterChain.GetEntry(ii);
         mfttrackChain.GetEntry(ii);
@@ -135,7 +136,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
         // loop on clusters
 
         for (auto& c : compClusters) {
-            mftHits.emplace_back(c, geom, chipMappingMFT, dict);
+            mftHits.emplace_back(c, geom, chipMappingMFT, dict, ii);
         }
 
         // loop on tracks
@@ -161,9 +162,12 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
         }
 
         if ( (ii % printPeriod == 0) && (doVerbosePrint) ) {
-            std::cout << "###### Entry " << ii 
+            std::cout << "###### ROF " << ii 
                       << " found " << mftHits.size() 
-                      << " MFT clusters" << std::endl;
+                      << " MFT clusters, " 
+                      << mftTracks.size() 
+                      << " MFT tracks"
+                      << std::endl;
             Int_t index = 0;
             std::cout << "---> mftHits[" << index << "]" << std::endl; 
             mftHits[index].print();
