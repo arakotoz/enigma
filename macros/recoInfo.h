@@ -287,10 +287,10 @@ HitStruct Hit::getHitStruct() const
     hit.measuredGlobalZ = clusterGlobalZ();
     hit.measuredSigmaX2 = clusterSigmaX2();
     hit.measuredSigmaY2 = clusterSigmaY2();
-    hit.measuredSigmaY2 = clusterSigmaZ2();
+    hit.measuredSigmaZ2 = clusterSigmaZ2();
     hit.recoGlobalX = trackGlobalX(); 
     hit.recoGlobalY = trackGlobalY(); 
-    hit.recoGlobalZ = trackGlobalY(); 
+    hit.recoGlobalZ = trackGlobalZ(); 
     hit.residualX = residualX();
     hit.residualY = residualY(); 
     hit.residualZ = residualZ(); 
