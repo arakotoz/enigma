@@ -145,6 +145,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     Int_t nclsTotal = 0;
     Int_t nclsInTracks = 0;
     Int_t nTrackCA = 0;
+    Int_t nRofNoTrack = 0;
 
     for (Int_t ii = 0; ii < nRof; ii++ ) {
 
@@ -170,6 +171,10 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
         }
         
         // loop on tracks
+
+        if (mftTracks.size() == 0) {
+            nRofNoTrack++;
+        }
 
         for (auto& track : mftTracks) {
             auto ncls = track.getNumberOfPoints();
@@ -233,6 +238,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     std::cout << "Total nb of tracks : \t\t" << trackIdx+1 << std::endl;
     std::cout << "Total nb clusters in tracks: \t" <<  nclsInTracks << std::endl;
     std::cout << "Total nb of CA tracks : \t" << nTrackCA << std::endl;
+    std::cout << "Total nb of no track ROFs : \t" << nRofNoTrack << std::endl;
     std::cout << "----------------------------------- " << endl;
     std::cout << "Execution time: \t\t" 
               << std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time).count()
