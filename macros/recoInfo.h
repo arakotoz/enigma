@@ -17,6 +17,8 @@
 
 struct HitStruct {
     UInt_t rofIdx; // readout frame index
+    UInt_t bc; // BC
+    UInt_t orbit; // orbit
     UShort_t sensor; // sensor id
     UShort_t layer; // layer id
     UShort_t disk; // disk id
@@ -69,6 +71,7 @@ class Hit
 
         // short-named getters
 
+        UInt_t bc() const { return mBc; }
         double clusterGlobalX() const { return mGlobalMeasuredPosition.X(); }
         double clusterGlobalY() const { return mGlobalMeasuredPosition.Y(); }
         double clusterGlobalZ() const { return mGlobalMeasuredPosition.Z(); }
@@ -79,6 +82,7 @@ class Hit
         UShort_t half() const { return mHalf; }
         Bool_t isInTrack() const { return (mTrackIdx > -1) ? kTRUE : kFALSE; }
         UShort_t layer() const { return mLayer; }
+        UShort_t orbit() const { return mOrbit; }        
         double residualX() const; // (cm)
         double residualY() const; // (cm)
         double residualZ() const; // (cm)
@@ -115,6 +119,7 @@ class Hit
 
         // setters
 
+        void setBc(const UInt_t bc) { mBc = bc; }
         void setClusterGlobalPosition(
             const o2::math_utils::Point3D<double>& position)
         {
@@ -139,16 +144,18 @@ class Hit
         {
             mGlobalMeasuredPosition.SetZ(z);
         }
-        void setMeasuredErrors(double sx2, double sy2, double sz2)
+        void setMeasuredErrors(const double sx2,
+            const double sy2, const double sz2)
         {
             setMeasuredSigmaX2(sx2);
             setMeasuredSigmaY2(sy2);
             setMeasuredSigmaZ2(sz2);
         }
-        void setMeasuredSigmaX2(double v) { mMeasuredSigmaX2 = v; }
-        void setMeasuredSigmaY2(double v) { mMeasuredSigmaY2 = v; }
-        void setMeasuredSigmaZ2(double v) { mMeasuredSigmaZ2 = v; }
-        void setRofIdx(const UInt_t idx){ mRofIdx = idx; }
+        void setMeasuredSigmaX2(const double v) { mMeasuredSigmaX2 = v; }
+        void setMeasuredSigmaY2(const double v) { mMeasuredSigmaY2 = v; }
+        void setMeasuredSigmaZ2(const double v) { mMeasuredSigmaZ2 = v; }
+        void setOrbit(const UInt_t v) { mOrbit = v; }
+        void setRofIdx(const UInt_t idx) { mRofIdx = idx; }
         void setSensor(Int_t sensor, o2::itsmft::ChipMappingMFT mapping);
         void setTrackGlobalPosition(
             const o2::math_utils::Point3D<double>& position)
@@ -179,6 +186,10 @@ class Hit
     protected:
         // readout frame index
         UInt_t mRofIdx = 0;
+        // BC
+        UInt_t mBc = 0;
+        // orbit
+        UInt_t mOrbit = 0;
         // sensor id
         UShort_t mSensor = 0;
         // layer id
@@ -205,6 +216,8 @@ class Hit
 //__________________________________________________________________________
 Hit::Hit() 
   : mRofIdx(0),
+    mBc(0),
+    mOrbit(0),
     mSensor(0),
     mLayer(0),
     mDisk(0),
@@ -295,6 +308,8 @@ HitStruct Hit::getHitStruct() const
 {
     HitStruct hit{};
     hit.rofIdx = rofIdx();
+    hit.bc = bc();
+    hit.orbit = orbit();
     hit.sensor = sensor();
     hit.layer = layer();
     hit.disk = disk();
@@ -318,7 +333,7 @@ HitStruct Hit::getHitStruct() const
 //__________________________________________________________________________
 void Hit::print() const
 {
-    std::cout << "Hit " << std::noshowpos
+    std::cout << "BC " << bc() << " hit " << std::noshowpos
               << "s " << std::setw(4) << sensor() << " "
               << "l " << std::setw(2) << layer() << " "
               << "d " << std::setw(2) << disk() << " "

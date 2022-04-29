@@ -14,7 +14,9 @@
 #include <TTree.h>
 #include <Rtypes.h>
 
+#include "CommonDataFormat/InteractionRecord.h"
 #include "DataFormatsITSMFT/CompCluster.h"
+#include "DataFormatsITSMFT/ROFRecord.h"
 #include "DataFormatsITSMFT/TopologyDictionary.h"
 #include "DataFormatsMFT/TrackMFT.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
@@ -37,6 +39,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
                         )
 {
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
     // geometry
 
     const bool applyMisalignment = false;
@@ -90,21 +93,23 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
     std::vector<o2::itsmft::CompClusterExt> compClusters, *compClustersP = &compClusters;
     std::vector<unsigned char> clusterPatterns, *clusterPatternsP = &clusterPatterns;
+    std::vector<o2::itsmft::ROFRecord> clustersRof, *clustersRofP = &clustersRof;
     std::vector<Hit> mftHits;
     mftclusterChain.SetBranchAddress("MFTClusterComp", &compClustersP);
     mftclusterChain.SetBranchAddress("MFTClusterPatt", &clusterPatternsP);
+    mftclusterChain.SetBranchAddress("MFTClustersROF", &clustersRofP);
     Int_t nEntriesClusterChain = mftclusterChain.GetEntries();
-    std::cout << "Number of cluster entries = " << nEntriesClusterChain << std::endl;
+    std::cout << "Number of cluster chain entries = " << nEntriesClusterChain << std::endl;
 
     std::vector<o2::mft::TrackMFT> mftTracks, *mftTracksP = &mftTracks;
     std::vector<int> trackClusterRefs, *trackClusterRefsP = &trackClusterRefs;
     mfttrackChain.SetBranchAddress("MFTTrack", &mftTracksP);
     mfttrackChain.SetBranchAddress("MFTTrackClusIdx", &trackClusterRefsP);
     Int_t nEntriesTrackChain = mfttrackChain.GetEntries();
-    std::cout << "Number of track entries = " << nEntriesTrackChain << std::endl;
+    std::cout << "Number of track chain entries = " << nEntriesTrackChain << std::endl;
 
     assert(nEntriesClusterChain == nEntriesTrackChain);
-    Int_t nRof = nEntriesClusterChain;
+    const Int_t nRof = nEntriesClusterChain;
 
     // output tree
 
@@ -114,6 +119,8 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
 	TTree* tree = new TTree("recoInfo","the reco info tree");
     tree->Branch("rofIdx", &hitInfo.rofIdx, "rofIdx/i");
+    tree->Branch("bc", &hitInfo.bc, "bc/i");
+    tree->Branch("orbit", &hitInfo.orbit, "orbit/i");
 	tree->Branch("sensor", &hitInfo.sensor, "sensor/s");
 	tree->Branch("layer", &hitInfo.layer, "layer/s");
 	tree->Branch("disk", &hitInfo.disk, "disk/s");
@@ -156,6 +163,12 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
             mftHits.emplace_back(c, pattIt, geom, chipMappingMFT, dict, ii);
         }
 
+        const auto& rofRec = clustersRof[ii].getBCData();
+        for (auto icls = 0; icls < compClusters.size(); icls++) {
+            mftHits[icls].setOrbit(rofRec.orbit);
+            mftHits[icls].setBc(rofRec.bc);
+        }
+        
         // loop on tracks
 
         for (auto& track : mftTracks) {
