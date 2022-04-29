@@ -112,8 +112,10 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     const Int_t nRof = nEntriesClusterChain;
 
     // output tree
+    // with general use compression level 505 
+    // cf https://root.cern.ch/doc/master/structROOT_1_1RCompressionSetting_1_1EDefaults.html#a47faae5d3e4bb7b1941775f764730596aa27e7f29058cc84d676f20aea9b86c30
 
-    TFile hfile(Form("%s/outtree.root", generalPath.c_str()), "recreate");
+    TFile hfile(Form("%s/outtree.root", generalPath.c_str()), "recreate", "", 505);
 
     HitStruct hitInfo;
 
