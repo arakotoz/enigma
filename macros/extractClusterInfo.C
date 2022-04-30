@@ -148,11 +148,12 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
     Int_t nclsInTracks = 0;
     Int_t nTrackCA = 0;
     Int_t nRofNoTrack = 0;
+    Int_t current_strobe = 0;
 
-    for (Int_t ii = 0; ii < nRof; ii++ ) {
+    for (Int_t irof = 0; irof < nRof; irof++ ) {
 
-        mftclusterChain.GetEntry(ii);
-        mfttrackChain.GetEntry(ii);
+        mftclusterChain.GetEntry(irof);
+        mfttrackChain.GetEntry(irof);
 
         // Cache compact clusters
 
@@ -163,10 +164,14 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
         // loop on clusters
 
         for (auto& c : compClusters) {
-            mftHits.emplace_back(c, pattIt, geom, chipMappingMFT, dict, ii);
+            mftHits.emplace_back(c, pattIt, geom, chipMappingMFT, dict, irof);
         }
 
-        const auto& rofRec = clustersRof[ii].getBCData();
+        if ( current_strobe >= clustersRof.size() ) {
+            current_strobe = 0;
+        }
+        assert(current_strobe < clustersRof.size());
+        const auto& rofRec = clustersRof[current_strobe].getBCData();
         for (auto icls = 0; icls < compClusters.size(); icls++) {
             mftHits[icls].setOrbit(rofRec.orbit);
             mftHits[icls].setBc(rofRec.bc);
@@ -198,8 +203,8 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
             nclsInTracks += ncls;
         }
 
-        if ((ii % (nRof/printPeriod) == 0) && doVerbosePrint) {
-            std::cout << "\n###### ROF " << ii 
+        if ((irof % (nRof/printPeriod) == 0) && doVerbosePrint) {
+            std::cout << "\n###### ROF " << irof 
                       << " found " << mftHits.size() 
                       << " MFT clusters, " 
                       << mftTracks.size() 
@@ -227,6 +232,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
         }
 
         nclsTotal += mftHits.size();
+        current_strobe++;
     }
 
     // save output tree
