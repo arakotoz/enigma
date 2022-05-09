@@ -1499,9 +1499,9 @@ void printChipsPerHalfLayer()
             std::cout << "Chips in layer " << layer << " half " << half << ": ";
             for (auto &chipId : getChipsInHalfLayer(half, layer))
             {
-                std::cout << chipId << " ";
+                std::cout << std::setw(3) << chipId << ", ";
             }
-            std::cout << std::endl;
+            std::cout << std::noshowpos << std::endl;
         }
     }
 }
