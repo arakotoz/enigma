@@ -13,6 +13,7 @@
 #include<TString.h>
 #include <TTree.h>
 #include <Rtypes.h>
+#include <ROOT/RDataFrame.hxx>
 
 #include "CommonDataFormat/InteractionRecord.h"
 #include "DataFormatsITSMFT/CompCluster.h"
@@ -38,6 +39,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
                         const bool keepClustersInTracksOnly = true
                         )
 {
+    ROOT::EnableImplicitMT(0);
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
     // geometry
