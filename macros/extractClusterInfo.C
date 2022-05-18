@@ -189,14 +189,15 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
             auto ncls = track.getNumberOfPoints();
             auto offset = track.getExternalClusterIndexOffset();
             for (auto icls = 0; icls < ncls; icls++) {
-                assert(offset+icls < compClusters.size());
-                track.propagateParamToZlinear(mftHits[offset+icls].clusterGlobalZ());
-                mftHits[offset+icls].setTrackGlobalPosition(
+                auto clsEntry = trackClusterRefs[offset + icls];
+                assert(clsEntry < mftHits.size());
+                track.propagateParamToZlinear(mftHits[clsEntry].clusterGlobalZ());
+                mftHits[clsEntry].setTrackGlobalPosition(
                     track.getX(),
                     track.getY(),
                     track.getZ()
                 );
-                mftHits[offset+icls].setTrackIdx(trackIdx);
+                mftHits[clsEntry].setTrackIdx(trackIdx);
             }
             if ( track.isCA() ) {
                 nTrackCA++;
