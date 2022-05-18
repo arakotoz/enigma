@@ -333,7 +333,10 @@ HitStruct Hit::getHitStruct() const
 //__________________________________________________________________________
 void Hit::print() const
 {
-    std::cout << "BC " << bc() << " hit " << std::noshowpos
+    std::cout << "BC " << bc() 
+              << " orbit " << orbit()
+              << " rofIdx " << rofIdx() 
+              << " hit " << std::noshowpos
               << "s " << std::setw(4) << sensor() << " "
               << "l " << std::setw(2) << layer() << " "
               << "d " << std::setw(2) << disk() << " "
