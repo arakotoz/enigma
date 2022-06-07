@@ -22,18 +22,30 @@
 //-----------------------------------------------------------------------------
 
 #include "MCHAlign/Alignment.h"
-
+#include "MCHAlign/AliMillePede2.h"
+#include "MCHAlign/AliMillePedeRecord.h"
 #include <iostream>
 
 #include "MCHTracking/Track.h"
 #include "MCHTracking/TrackParam.h"
 #include "MCHTracking/Cluster.h"
+#include "TGeoManager.h"
+
+// #include "DataFormatsMCH/ROFRecord.h"
+// #include "DataFormatsMCH/TrackMCH.h"
+// #include "DataFormatsMCH/Cluster.h"
+// #include "DataFormatsMCH/Digit.h"
+
 // #include "AliMUONGeometryTransformer.h"
 // #include "AliMUONGeometryModuleTransformer.h"
-// #include "AliMUONGeometryDetElement.h"
+// #include "MCHAlign/AliMUONGeometryDetElement.h"
 // #include "AliMUONGeometryBuilder.h"
-#include "Align/Millepede2Record.h"
+#include "MCHGeometryCreator/Geometry.h"
+#include "MCHGeometryTest/Helpers.h"
+#include "MCHGeometryTransformer/Transformations.h"
+#include "TGeoManager.h"
 
+// #include "Align/Millepede2Record.h" //to be replaced 
 // #include "AliMpExMap.h"
 // #include "AliMpExMapIterator.h"
 
@@ -45,6 +57,7 @@
 #include <TMatrixD.h>
 #include <TClonesArray.h>
 #include <TGraphErrors.h>
+#include <TObject.h>
 
 namespace o2
 {
@@ -134,12 +147,12 @@ Alignment::Alignment()
     fStartFac(256),
     fResCutInitial(100),
     fResCut(100),
-    fMillepede(0L),
+    fMillepede(0L), // to be modified
     fCluster(0L),
     fNStdDev(3),
     fDetElemNumber(0),
     fTrackRecord(),
-    // fTransform(0),
+    fTransformCreator(),
     fGeoCombiTransInverse(),
     fDoEvaluation(kFALSE),
     fTrackParamOrig(0),
@@ -158,7 +171,8 @@ Alignment::Alignment()
   fAllowVar[3] = 5;    // z
 
   // initialize millepede
-  fMillepede = new o2::align::Mille("theMilleFile.txt");
+  fMillepede = new AliMillePede2();
+  // fMillepede = new o2::align::Mille("theMilleFile.txt"); // To be replaced by AliMillepede2
 
   // initialize degrees of freedom
   // by default all parameters are free
@@ -177,11 +191,11 @@ Alignment::Alignment()
 }
 
 //_____________________________________________________________________
-Alignment::~Alignment()
-{
-  /// destructor
-}
-
+//Alignment::~Alignment()
+//{
+//  /// destructor
+//}
+//Alignment::~Alignment() = default;
 //_____________________________________________________________________
 void Alignment::init(void)
 {
@@ -193,7 +207,7 @@ void Alignment::init(void)
   but before constrains are added and before global parameters initial value are set
   */
   if (fInitialized) {
-    LOG(FATAL) << "Millepede already initialized";
+    LOG(fatal) << "Millepede already initialized";
   }
 
   // assign proper groupID to free parameters
@@ -218,39 +232,41 @@ void Alignment::init(void)
 
       // check
       if (iDeBase < 0 || iDeBase >= iPar / fgNParCh) {
-        LOG(FATAL) << "Group for parameter index " << iPar << " has wrong base detector element: " << iDeBase;
+        LOG(fatal) << "Group for parameter index " << iPar << " has wrong base detector element: " << iDeBase;
       }
 
       // assign identical group id to current
       fGlobalParameterStatus[iPar] = fGlobalParameterStatus[iDeBase * fgNParCh + iParBase];
-      LOG(INFO) << "Parameter " << iPar << " grouped to detector " << iDeBase << " (" << GetParameterMaskString(1 << iParBase).Data() << ")";
+      LOG(info) << "Parameter " << iPar << " grouped to detector " << iDeBase << " (" << GetParameterMaskString(1 << iParBase).Data() << ")";
 
     } else
-      LOG(FATAL) << "Unrecognized parameter status for index " << iPar << ": " << fGlobalParameterStatus[iPar];
+      LOG(fatal) << "Unrecognized parameter status for index " << iPar << ": " << fGlobalParameterStatus[iPar];
   }
 
-  LOG(INFO) << "Free Parameters: " << nGlobal << " out of " << fNGlobal;
+  LOG(info) << "Free Parameters: " << nGlobal << " out of " << fNGlobal;
 
   // initialize millepede
   // fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial, fGlobalParameterStatus);
+  fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial); // AliMillePede2 implementation
+
   fInitialized = kTRUE;
 
   // some debug output
   for (Int_t iPar = 0; iPar < fgNParCh; ++iPar) {
-    LOG(INFO) << "fAllowVar[" << iPar << "]= " << fAllowVar[iPar];
+    LOG(info) << "fAllowVar[" << iPar << "]= " << fAllowVar[iPar];
   }
 
   // set allowed variations for all parameters
   for (Int_t iDet = 0; iDet < fgNDetElem; ++iDet) {
     for (Int_t iPar = 0; iPar < fgNParCh; ++iPar) {
-      // fMillepede->SetParSigma(iDet * fgNParCh + iPar, fAllowVar[iPar]);
+      fMillepede->SetParSigma(iDet * fgNParCh + iPar, fAllowVar[iPar]);
     }
   }
 
   // Set iterations
-  if (fStartFac > 1)
-    // fMillepede->SetIterations(fStartFac);
-
+  if (fStartFac > 1){
+    fMillepede->SetIterations(fStartFac);
+  }
     // setup monitoring TFile
     if (fDoEvaluation && fRefitStraightTracks) {
       fTFile = new TFile("Alignment.root", "RECREATE");
@@ -270,7 +286,7 @@ void Alignment::init(void)
 //_____________________________________________________
 void Alignment::terminate(void)
 {
-  LOG(INFO) << "Closing Evaluation TFile";
+  LOG(info) << "Closing Evaluation TFile";
   if (fTFile && fTTree) {
     fTFile->cd();
     fTTree->Write();
@@ -279,7 +295,7 @@ void Alignment::terminate(void)
 }
 
 //_____________________________________________________
-o2::align::Millepede2Record* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Double_t weight)
+AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Double_t weight)
 {
   /// process track for alignment minimization
   /**
@@ -288,9 +304,10 @@ o2::align::Millepede2Record* Alignment::ProcessTrack(Track& track, Bool_t doAlig
   */
 
   // reset track records
-  // fTrackRecord.Reset();
-  // if (fMillepede->GetRecord())
-  //   fMillepede->GetRecord()->Reset();
+  fTrackRecord.Reset();
+  if (fMillepede->GetRecord()){
+     fMillepede->GetRecord()->Reset();
+  }
 
   // loop over clusters to get starting values
   Bool_t first(kTRUE);
@@ -299,7 +316,7 @@ o2::align::Millepede2Record* Alignment::ProcessTrack(Track& track, Bool_t doAlig
   for (auto itTrackParam(track.begin()); itTrackParam != track.end(); ++itTrackParam) {
 
     // get cluster
-    const Cluster* cluster = itTrackParam->getClusterPtr();
+    const Cluster* Cluster = itTrackParam->getClusterPtr();
     if (!cluster)
       continue;
 
@@ -398,13 +415,14 @@ o2::align::Millepede2Record* Alignment::ProcessTrack(Track& track, Bool_t doAlig
   }
 
   // copy track record
-  // fMillepede->SetRecordRun(fRunNumber);
-  // fMillepede->SetRecordWeight(weight);
-  // fTrackRecord = *fMillepede->GetRecord();
+  fMillepede->SetRecordRun(fRunNumber);
+  fMillepede->SetRecordWeight(weight);
+  fTrackRecord = *fMillepede->GetRecord();
 
   // save record data
   if (doAlignment) {
-    // fMillepede->SaveRecordData();
+    fMillepede->SaveRecordData();
+    fMillepede->CloseDataRecStorage();
   }
 
   // return record
@@ -412,23 +430,25 @@ o2::align::Millepede2Record* Alignment::ProcessTrack(Track& track, Bool_t doAlig
 }
 
 //______________________________________________________________________________
-void Alignment::ProcessTrack(o2::align::Millepede2Record* trackRecord)
+void Alignment::ProcessTrack(AliMillePedeRecord* trackRecord)
 {
-  LOG(FATAL) << __PRETTY_FUNCTION__ << " is disabled";
+  LOG(fatal) << __PRETTY_FUNCTION__ << " is disabled";
 
   /// process track record
-  // if (!trackRecord)
-  //   return;
+  if (!trackRecord)
+    return;
 
   // // make sure record storage is initialized
-  // if (!fMillepede->GetRecord())
-  //   fMillepede->InitDataRecStorage();
-
+  if (!fMillepede->GetRecord()){
+    fMillepede->InitDataRecStorage(kFalse);
+  }
   // // copy content
-  // *fMillepede->GetRecord() = *trackRecord;
+  *fMillepede->GetRecord() = *trackRecord;
 
-  // // save record
-  // fMillepede->SaveRecordData();
+  // save record
+  fMillepede->SaveRecordData();
+  // write to local file
+  fMillepede->CloseDataRecStorage();
 
   return;
 }
@@ -437,7 +457,7 @@ void Alignment::ProcessTrack(o2::align::Millepede2Record* trackRecord)
 void Alignment::FixAll(UInt_t mask)
 {
   /// fix parameters matching mask, for all chambers
-  LOG(INFO) << "Fixing " << GetParameterMaskString(mask).Data() << " for all detector elements";
+  LOG(info) << "Fixing " << GetParameterMaskString(mask).Data() << " for all detector elements";
 
   // fix all stations
   for (Int_t i = 0; i < fgNDetElem; ++i) {
@@ -459,7 +479,7 @@ void Alignment::FixChamber(Int_t iCh, UInt_t mask)
 
   // check boundaries
   if (iCh < 1 || iCh > 10) {
-    LOG(FATAL) << "Invalid chamber index " << iCh;
+    LOG(fatal) << "Invalid chamber index " << iCh;
   }
 
   // get first and last element
@@ -467,7 +487,7 @@ void Alignment::FixChamber(Int_t iCh, UInt_t mask)
   const Int_t iDetElemLast = fgSNDetElemCh[iCh];
   for (Int_t i = iDetElemFirst; i < iDetElemLast; ++i) {
 
-    LOG(INFO) << "Fixing " << GetParameterMaskString(mask).Data() << " for detector element " << i;
+    LOG(info) << "Fixing " << GetParameterMaskString(mask).Data() << " for detector element " << i;
 
     if (mask & ParX)
       FixParameter(i, 0);
@@ -558,7 +578,7 @@ void Alignment::FixParameter(Int_t iPar)
 
   /// fix a given parameter, counting from 0
   if (fInitialized) {
-    LOG(FATAL) << "Millepede already initialized";
+    LOG(fatal) << "Millepede already initialized";
   }
 
   fGlobalParameterStatus[iPar] = kFixedParId;
@@ -571,7 +591,7 @@ void Alignment::ReleaseChamber(Int_t iCh, UInt_t mask)
 
   // check boundaries
   if (iCh < 1 || iCh > 10) {
-    LOG(FATAL) << "Invalid chamber index " << iCh;
+    LOG(fatal) << "Invalid chamber index " << iCh;
   }
 
   // get first and last element
@@ -579,7 +599,7 @@ void Alignment::ReleaseChamber(Int_t iCh, UInt_t mask)
   const Int_t iDetElemLast = fgSNDetElemCh[iCh];
   for (Int_t i = iDetElemFirst; i < iDetElemLast; ++i) {
 
-    LOG(INFO) << "Releasing " << GetParameterMaskString(mask).Data() << " for detector element " << i;
+    LOG(info) << "Releasing " << GetParameterMaskString(mask).Data() << " for detector element " << i;
 
     if (mask & ParX)
       ReleaseParameter(i, 0);
@@ -613,7 +633,7 @@ void Alignment::ReleaseParameter(Int_t iPar)
 
   /// release a given parameter, counting from 0
   if (fInitialized) {
-    LOG(FATAL) << "Millepede already initialized";
+    LOG(fatal) << "Millepede already initialized";
   }
 
   fGlobalParameterStatus[iPar] = kFreeParId;
@@ -624,7 +644,7 @@ void Alignment::GroupChamber(Int_t iCh, UInt_t mask)
 {
   /// group parameters matching mask for all detector elements in a given chamber, counting from 1
   if (iCh < 1 || iCh > fgNCh) {
-    LOG(FATAL) << "Invalid chamber index " << iCh;
+    LOG(fatal) << "Invalid chamber index " << iCh;
   }
 
   const Int_t detElemMin = 100 * iCh;
@@ -637,11 +657,11 @@ void Alignment::GroupHalfChamber(Int_t iCh, Int_t iHalf, UInt_t mask)
 {
   /// group parameters matching mask for all detector elements in a given tracking module (= half chamber), counting from 0
   if (iCh < 1 || iCh > fgNCh) {
-    LOG(FATAL) << "Invalid chamber index " << iCh;
+    LOG(fatal) << "Invalid chamber index " << iCh;
   }
 
   if (iHalf < 0 || iHalf > 1) {
-    LOG(FATAL) << "Invalid half chamber index " << iHalf;
+    LOG(fatal) << "Invalid half chamber index " << iHalf;
   }
 
   const Int_t iHalfCh = 2 * (iCh - 1) + iHalf;
@@ -655,7 +675,7 @@ void Alignment::GroupDetElems(Int_t detElemMin, Int_t detElemMax, UInt_t mask)
   // check number of detector elements
   const Int_t nDetElem = detElemMax - detElemMin + 1;
   if (nDetElem < 2) {
-    LOG(FATAL) << "Requested group of DEs " << detElemMin << "-" << detElemMax << " contains less than 2 DE's";
+    LOG(fatal) << "Requested group of DEs " << detElemMin << "-" << detElemMax << " contains less than 2 DE's";
   }
 
   // create list
@@ -674,7 +694,7 @@ void Alignment::GroupDetElems(const Int_t* detElemList, Int_t nDetElem, UInt_t m
 {
   /// group parameters matching mask for all detector elements in list
   if (fInitialized) {
-    LOG(FATAL) << "Millepede already initialized";
+    LOG(fatal) << "Millepede already initialized";
   }
 
   const Int_t iDeBase(GetDetElemNumber(detElemList[0]));
@@ -690,9 +710,9 @@ void Alignment::GroupDetElems(const Int_t* detElemList, Int_t nDetElem, UInt_t m
       fGlobalParameterStatus[iDeCurrent * fgNParCh + 3] = (i == 0) ? kGroupBaseId : (kGroupBaseId - iDeBase - 1);
 
     if (i == 0)
-      LOG(INFO) << "Creating new group for detector " << detElemList[i] << " and variable " << GetParameterMaskString(mask).Data();
+      LOG(info) << "Creating new group for detector " << detElemList[i] << " and variable " << GetParameterMaskString(mask).Data();
     else
-      LOG(INFO) << "Adding detector element " << detElemList[i] << " to current group";
+      LOG(info) << "Adding detector element " << detElemList[i] << " to current group";
   }
 }
 
@@ -735,11 +755,11 @@ void Alignment::SetParameterNonLinear(Int_t iPar)
 {
   /// Set nonlinear flag for parameter iPar
   if (!fInitialized) {
-    LOG(FATAL) << "Millepede not initialized";
+    LOG(fatal) << "Millepede not initialized";
   }
 
-  // fMillepede->SetNonLinear(iPar);
-  LOG(INFO) << "Parameter " << iPar << " set to non linear ";
+  fMillepede->SetNonLinear(iPar);
+  LOG(info) << "Parameter " << iPar << " set to non linear ";
 }
 
 //______________________________________________________________________
@@ -850,6 +870,15 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
     Double_t lDetElemGloX = 0.;
     Double_t lDetElemGloY = 0.;
     Double_t lDetElemGloZ = 0.;
+
+    auto fTransform = fTransformCreator(lDetElemId);
+    o2::math_utils::Point3D<double> SlatPos{0.0, 0.0, 0.0};
+    o2::math_utils::Point3D<double> GlobalPos;
+
+    fTransform.LocalToMaster(SlatPos, GlobalPos);
+    lDetElemGloX = GlobalPos.x();
+    lDetElemGloY = GlobalPos.y();
+    lDetElemGloZ = GlobalPos.z();
     // fTransform->Local2Global(lDetElemId, 0, 0, 0, lDetElemGloX, lDetElemGloY, lDetElemGloZ);
 
     // increment mean Y, mean Z, sigmas and number of accepted detectors
@@ -867,7 +896,7 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
   lMeanZ /= lNDetElem;
   lSigmaZ /= lNDetElem;
   lSigmaZ = TMath::Sqrt(lSigmaZ - lMeanZ * lMeanZ);
-  LOG(INFO) << "Used " << lNDetElem << " DetElem, MeanZ= " << lMeanZ << ", SigmaZ= " << lSigmaZ;
+  LOG(info) << "Used " << lNDetElem << " DetElem, MeanZ= " << lMeanZ << ", SigmaZ= " << lSigmaZ;
 
   // create all possible arrays
   Array fConstraintX[4];  //Array for constraint equation X
@@ -906,6 +935,15 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
     Double_t lDetElemGloX = 0.;
     Double_t lDetElemGloY = 0.;
     Double_t lDetElemGloZ = 0.;
+
+    auto fTransform = fTransformCreator(lDetElemId);
+    o2::math_utils::Point3D<double> SlatPos{0.0, 0.0, 0.0};
+    o2::math_utils::Point3D<double> GlobalPos;
+    
+    fTransform.LocalToMaster(SlatPos, GlobalPos);
+    lDetElemGloX = GlobalPos.x();
+    lDetElemGloY = GlobalPos.y();
+    lDetElemGloZ = GlobalPos.z();
     // fTransform->Local2Global(lDetElemId, 0, 0, 0, lDetElemGloX, lDetElemGloY, lDetElemGloZ);
 
     // loop over sides
@@ -1022,10 +1060,10 @@ void Alignment::InitGlobalParameters(Double_t* par)
 {
   /// Initialize global parameters with par array
   if (!fInitialized) {
-    LOG(FATAL) << "Millepede is not initialized";
+    LOG(fatal) << "Millepede is not initialized";
   }
 
-  // fMillepede->SetGlobalParameters(par);
+  fMillepede->SetGlobalParameters(par);
 }
 
 //______________________________________________________________________
@@ -1034,12 +1072,12 @@ void Alignment::SetAllowedVariation(Int_t iPar, Double_t value)
   /// "Encouraged" variation for degrees of freedom
   // check initialization
   if (fInitialized) {
-    LOG(FATAL) << "Millepede already initialized";
+    LOG(fatal) << "Millepede already initialized";
   }
 
   // check initialization
   if (!(iPar >= 0 && iPar < fgNParCh)) {
-    LOG(FATAL) << "Invalid index: " << iPar;
+    LOG(fatal) << "Invalid index: " << iPar;
   }
 
   fAllowVar[iPar] = value;
@@ -1055,7 +1093,7 @@ void Alignment::SetSigmaXY(Double_t sigmaX, Double_t sigmaY)
 
   // print
   for (Int_t i = 0; i < 2; ++i) {
-    LOG(INFO) << "fSigma[" << i << "] =" << fSigma[i];
+    LOG(info) << "fSigma[" << i << "] =" << fSigma[i];
   }
 }
 
@@ -1064,24 +1102,24 @@ void Alignment::GlobalFit(Double_t* parameters, Double_t* errors, Double_t* pull
 {
 
   /// Call global fit; Global parameters are stored in parameters
-  // fMillepede->GlobalFit(parameters, errors, pulls);
+  fMillepede->GlobalFit(parameters, errors, pulls);
 
-  LOG(INFO) << "Done fitting global parameters";
+  LOG(info) << "Done fitting global parameters";
   for (int iDet = 0; iDet < fgNDetElem; ++iDet) {
-    LOG(INFO) << iDet << " " << parameters[iDet * fgNParCh + 0] << " " << parameters[iDet * fgNParCh + 1] << " " << parameters[iDet * fgNParCh + 3] << " " << parameters[iDet * fgNParCh + 2];
+    LOG(info) << iDet << " " << parameters[iDet * fgNParCh + 0] << " " << parameters[iDet * fgNParCh + 1] << " " << parameters[iDet * fgNParCh + 3] << " " << parameters[iDet * fgNParCh + 2];
   }
 }
 
 //_____________________________________________________
 void Alignment::PrintGlobalParameters() const
 {
-  // fMillepede->PrintGlobalParameters();
+  fMillepede->PrintGlobalParameters();
 }
 
 //_____________________________________________________
 Double_t Alignment::GetParError(Int_t iPar) const
 {
-  // return fMillepede->GetParError(iPar);
+  return fMillepede->GetParError(iPar);
 }
 
 // //______________________________________________________________________
@@ -1216,7 +1254,7 @@ Double_t Alignment::GetParError(Int_t iPar) const
 //       } else {
 
 //         // "invalid" detector elements come from MTR and are left unchanged
-//         AliInfo(Form("Keeping detElement %i unchanged", iDetElemId));
+//         Aliinfo(Form("Keeping detElement %i unchanged", iDetElemId));
 
 //         // update module
 //         TGeoHMatrix globalTransform(*detElement->GetGlobalTransformation());
@@ -1302,10 +1340,11 @@ void Alignment::SetAlignmentResolution(const TClonesArray* misAlignArray, Int_t 
             (volName.Length() == volName.Index(chName2) + chName2.Length())))) {
 
         volName.Remove(0, volName.Last('/') + 1);
-        // if (volName.Contains("GM"))
-        //   alignMat->SetCorrMatrix(mChCorrMatrix);
-        // else if (volName.Contains("DE"))
-        //   alignMat->SetCorrMatrix(mDECorrMatrix);
+        //if (volName.Contains("GM")){
+        //  alignMat->SetCorrMatrix(mChCorrMatrix);
+        //}else if (volName.Contains("DE")){
+        //  alignMat->SetCorrMatrix(mDECorrMatrix);
+        //}
       }
     }
   }
@@ -1367,10 +1406,10 @@ LocalTrackParam Alignment::RefitStraightTrack(Track& track, Double_t z0) const
   TMatrixD X(AtGASumInv, TMatrixD::kMult, AtGMSum);
 
   //   // TODO: compare with initial track parameters
-  //   AliInfo( Form( "x: %.3f vs %.3f", fTrackPos0[0], X(0,0) ) );
-  //   AliInfo( Form( "y: %.3f vs %.3f", fTrackPos0[1], X(1,0) ) );
-  //   AliInfo( Form( "dxdz: %.6g vs %.6g", fTrackSlope0[0], X(2,0) ) );
-  //   AliInfo( Form( "dydz: %.6g vs %.6g\n", fTrackSlope0[1], X(3,0) ) );
+  //   Aliinfo( Form( "x: %.3f vs %.3f", fTrackPos0[0], X(0,0) ) );
+  //   Aliinfo( Form( "y: %.3f vs %.3f", fTrackPos0[1], X(1,0) ) );
+  //   Aliinfo( Form( "dxdz: %.6g vs %.6g", fTrackSlope0[0], X(2,0) ) );
+  //   Aliinfo( Form( "dydz: %.6g vs %.6g\n", fTrackSlope0[1], X(3,0) ) );
 
   // fill output parameters
   LocalTrackParam out;
@@ -1386,7 +1425,8 @@ LocalTrackParam Alignment::RefitStraightTrack(Track& track, Double_t z0) const
 //_____________________________________________________
 void Alignment::FillDetElemData(const Cluster* cluster)
 {
-  LOG(FATAL) << __PRETTY_FUNCTION__ << " is disabled";
+  // LOG(fatal) << __PRETTY_FUNCTION__ << " is disabled";
+  LOG(info) << __PRETTY_FUNCTION__ << " is enabled";
 
   /// Get information of current detection element
   // get detector element number from Alice ID
@@ -1394,13 +1434,14 @@ void Alignment::FillDetElemData(const Cluster* cluster)
   fDetElemNumber = GetDetElemNumber(detElemId);
 
   // get detector element
-  // const AliMUONGeometryDetElement* detElement = fTransform->GetDetElement(detElemId);
-
+  // const AliMUONGeometryDetElement detElement(detElemId);
+  auto fTransform = fTransformCreator(detElemId);
   /*
   get the global transformation matrix and store its inverse, in order to manually perform
   the global to Local transformations needed to calculate the derivatives
   */
-  // fGeoCombiTransInverse = detElement->GetGlobalTransformation()->Inverse();
+  // fTransform = fTransform.Inverse();
+  // fTransform.GetTransformMatrix(fGeoCombiTransInverse);
 }
 
 //______________________________________________________________________
@@ -1473,7 +1514,7 @@ void Alignment::LocalEquationX(void)
   }
 
   // store local equation
-  // fMillepede->SetLocalEquation(fGlobalDerivatives, fLocalDerivatives, fMeas[0], fSigma[0]);
+  fMillepede->SetLocalEquation(fGlobalDerivatives, fLocalDerivatives, fMeas[0], fSigma[0]);
 }
 
 //______________________________________________________________________
@@ -1516,7 +1557,7 @@ void Alignment::LocalEquationY(void)
   }
 
   // store local equation
-  // fMillepede->SetLocalEquation(fGlobalDerivatives, fLocalDerivatives, fMeas[1], fSigma[1]);
+  fMillepede->SetLocalEquation(fGlobalDerivatives, fLocalDerivatives, fMeas[1], fSigma[1]);
 }
 
 //_________________________________________________________________________
@@ -1540,10 +1581,10 @@ void Alignment::AddConstraint(Double_t* par, Double_t value)
 {
   /// Constrain equation defined by par to value
   if (!fInitialized) {
-    LOG(FATAL) << "Millepede is not initialized";
+    LOG(fatal) << "Millepede is not initialized";
   }
 
-  // fMillepede->SetGlobalConstraint(par, value);
+  fMillepede->SetGlobalConstraint(par, value);
 }
 
 //______________________________________________________________________
@@ -1565,7 +1606,7 @@ Int_t Alignment::GetDetElemNumber(Int_t iDetElemId) const
 
   // make sure detector index is valid
   if (!(iCh > 0 && iCh <= fgNCh && iDet < fgNDetElemCh[iCh - 1])) {
-    LOG(FATAL) << "Invalid detector element id: " << iDetElemId;
+    LOG(fatal) << "Invalid detector element id: " << iDetElemId;
   }
 
   // add number of detectors up to this chamber

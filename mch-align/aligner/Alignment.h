@@ -21,6 +21,13 @@
 
 #include "Align/Millepede2Record.h"
 #include "Align/Mille.h"
+#include "MCHAlign/AliMillePede2.h"
+#include "MCHAlign/AliMillePedeRecord.h"
+#include "TGeoManager.h"
+
+#include "MCHGeometryCreator/Geometry.h"
+#include "MCHGeometryTest/Helpers.h"
+#include "MCHGeometryTransformer/Transformations.h"
 
 #include "MCHTracking/Track.h"
 #include "MCHTracking/Cluster.h"
@@ -58,7 +65,7 @@ class Alignment : public TObject
 {
 
  public:
-  Alignment() = default;
+  Alignment();
 
   ~Alignment() = default;
 
@@ -90,10 +97,10 @@ class Alignment : public TObject
     fgNDetElem = 156,
 
     /// Number of local parameters
-    fNLocal = 4,
+    fNLocal = 4, // t_x, t_y, x0, y0
 
     /// Number of degrees of freedom per chamber
-    fgNParCh = 4,
+    fgNParCh = 4, // x,y,z,phi
 
     /// Number of global parameters
     fNGlobal = fgNParCh * fgNDetElem
@@ -137,9 +144,9 @@ class Alignment : public TObject
     AllSides = SideTop | SideBottom | SideLeft | SideRight
   };
 
-  o2::align::Millepede2Record* ProcessTrack(Track& track, Bool_t doAlignment, Double_t weight = 1);
+  AliMillePedeRecord* ProcessTrack(Track& track, Bool_t doAlignment, Double_t weight = 1);
 
-  void ProcessTrack(o2::align::Millepede2Record*);
+  void ProcessTrack(AliMillePedeRecord*);
 
   //@name modifiers
   //@{
@@ -173,10 +180,10 @@ class Alignment : public TObject
   void SetSigmaXY(Double_t sigmaX, Double_t sigmaY);
 
   /// Set geometry transformer
-  // void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
-  // {
+  //void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
+  //{
   //   fTransform = transformer;
-  // }
+  //}
 
   //@}
 
@@ -347,7 +354,8 @@ class Alignment : public TObject
   Double_t fResCut;
 
   /// Detector independent alignment class
-  o2::align::Mille* fMillepede;
+  // o2::align::Mille* fMillepede;
+  AliMillePede2* fMillepede; // AliMillePede2 implementation
 
   /// running AliMUONVCluster
   o2::mch::Cluster* fCluster;
@@ -397,10 +405,12 @@ class Alignment : public TObject
   Int_t fDetElemNumber;
 
   /// running Track record
-  o2::align::Millepede2Record fTrackRecord;
+  // o2::align::Millepede2Record fTrackRecord;
+  AliMillePedeRecord fTrackRecord;
 
   /// Geometry transformation
   // AliMUONGeometryTransformer* fTransform;
+  o2::mch::geo::TransformationCreator fTransformCreator;
   TGeoCombiTrans fGeoCombiTransInverse;
 
   /// preform evaluation

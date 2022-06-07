@@ -70,7 +70,7 @@ ClassImp(o2::mch::geo::MisAligner);
 namespace o2::mch::geo
 {
 
-bool MisAligner::matrixToAngles(const double* rot, double& psi, double& theta, double& phi)
+bool MisAligner::isMatrixConvertedToAngles(const double* rot, double& psi, double& theta, double& phi) const
 {
   /// Calculates the Euler angles in "x y z" notation
   /// using the rotation matrix
@@ -88,130 +88,129 @@ bool MisAligner::matrixToAngles(const double* rot, double& psi, double& theta, d
 }
 //______________________________________________________________________________
 MisAligner::MisAligner(double cartXMisAligM, double cartXMisAligW, double cartYMisAligM, double cartYMisAligW, double angMisAligM, double angMisAligW)
-  : fUseUni(kFALSE),
-    fUseGaus(kTRUE),
-    fXYAngMisAligFactor(0.0),
-    fZCartMisAligFactor(0.0)
+  : TObject(), mUseUni(kFALSE), mUseGaus(kTRUE), mXYAngMisAligFactor(0.0), mZCartMisAligFactor(0.0)
 {
   /// Standard constructor
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 2; j++) {
-      fDetElemMisAlig[i][j] = 0.0;
-      fModuleMisAlig[i][j] = 0.0;
+      mDetElemMisAlig[i][j] = 0.0;
+      mModuleMisAlig[i][j] = 0.0;
     }
   }
-  fDetElemMisAlig[0][0] = cartXMisAligM;
-  fDetElemMisAlig[0][1] = cartXMisAligW;
-  fDetElemMisAlig[1][0] = cartYMisAligM;
-  fDetElemMisAlig[1][1] = cartYMisAligW;
-  fDetElemMisAlig[5][0] = angMisAligM;
-  fDetElemMisAlig[5][1] = angMisAligW;
+  mDetElemMisAlig[0][0] = cartXMisAligM;
+  mDetElemMisAlig[0][1] = cartXMisAligW;
+  mDetElemMisAlig[1][0] = cartYMisAligM;
+  mDetElemMisAlig[1][1] = cartYMisAligW;
+  mDetElemMisAlig[5][0] = angMisAligM;
+  mDetElemMisAlig[5][1] = angMisAligW;
 }
 
 //______________________________________________________________________________
 MisAligner::MisAligner(double cartMisAligM, double cartMisAligW, double angMisAligM, double angMisAligW)
-  : fUseUni(kFALSE),
-    fUseGaus(kTRUE),
-    fXYAngMisAligFactor(0.0),
-    fZCartMisAligFactor(0.0)
+  : TObject(), mUseUni(kFALSE), mUseGaus(kTRUE), mXYAngMisAligFactor(0.0), mZCartMisAligFactor(0.0)
 {
   /// Standard constructor
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 2; j++) {
-      fDetElemMisAlig[i][j] = 0.0;
-      fModuleMisAlig[i][j] = 0.0;
+      mDetElemMisAlig[i][j] = 0.0;
+      mModuleMisAlig[i][j] = 0.0;
     }
   }
-  fDetElemMisAlig[0][0] = cartMisAligM;
-  fDetElemMisAlig[0][1] = cartMisAligW;
-  fDetElemMisAlig[1][0] = cartMisAligM;
-  fDetElemMisAlig[1][1] = cartMisAligW;
-  fDetElemMisAlig[5][0] = angMisAligM;
-  fDetElemMisAlig[5][1] = angMisAligW;
+  mDetElemMisAlig[0][0] = cartMisAligM;
+  mDetElemMisAlig[0][1] = cartMisAligW;
+  mDetElemMisAlig[1][0] = cartMisAligM;
+  mDetElemMisAlig[1][1] = cartMisAligW;
+  mDetElemMisAlig[5][0] = angMisAligM;
+  mDetElemMisAlig[5][1] = angMisAligW;
 }
 
 //______________________________________________________________________________
 MisAligner::MisAligner(double cartMisAlig, double angMisAlig)
-  : fUseUni(kTRUE),
-    fUseGaus(kFALSE),
-    fXYAngMisAligFactor(0.0),
-    fZCartMisAligFactor(0.0)
+  : TObject(),
+    mUseUni(kTRUE),
+    mUseGaus(kFALSE),
+    mXYAngMisAligFactor(0.0),
+    mZCartMisAligFactor(0.0)
 {
   /// Standard constructor
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 2; j++) {
-      fDetElemMisAlig[i][j] = 0.0;
-      fModuleMisAlig[i][j] = 0.0;
+      mDetElemMisAlig[i][j] = 0.0;
+      mModuleMisAlig[i][j] = 0.0;
     }
   }
-  fDetElemMisAlig[0][1] = cartMisAlig;
-  fDetElemMisAlig[1][1] = cartMisAlig;
-  fDetElemMisAlig[5][1] = angMisAlig;
+  mDetElemMisAlig[0][1] = cartMisAlig;
+  mDetElemMisAlig[1][1] = cartMisAlig;
+  mDetElemMisAlig[5][1] = angMisAlig;
 }
 
 //_____________________________________________________________________________
 MisAligner::MisAligner()
-  : fUseUni(kTRUE),
-    fUseGaus(kFALSE),
-    fXYAngMisAligFactor(0.0),
-    fZCartMisAligFactor(0.0)
+  : TObject(),
+    mUseUni(kFALSE),
+    mUseGaus(kTRUE),
+    mXYAngMisAligFactor(0.0),
+    mZCartMisAligFactor(0.0)
 {
   /// Default constructor
   for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 2; j++) {
-      fDetElemMisAlig[i][j] = 0.0;
-      fModuleMisAlig[i][j] = 0.0;
+      mDetElemMisAlig[i][j] = 0.0;
+      mModuleMisAlig[i][j] = 0.0;
     }
   }
 }
 
+/*
 //______________________________________________________________________________
 MisAligner::~MisAligner()
 {
   /// Destructor
 }
+ */
 
 //_________________________________________________________________________
-void MisAligner::SetXYAngMisAligFactor(double factor)
+void MisAligner::setXYAngMisAligFactor(double factor)
 {
   /// Set XY angular misalign factor
 
   if (TMath::Abs(factor) > 1.0 && factor > 0.) {
-    fXYAngMisAligFactor = factor;
-    fDetElemMisAlig[3][0] = fDetElemMisAlig[5][0] * factor; // These lines were
-    fDetElemMisAlig[3][1] = fDetElemMisAlig[5][1] * factor; // added to keep
-    fDetElemMisAlig[4][0] = fDetElemMisAlig[5][0] * factor; // backward
-    fDetElemMisAlig[4][1] = fDetElemMisAlig[5][1] * factor; // compatibility
+    mXYAngMisAligFactor = factor;
+    mDetElemMisAlig[3][0] = mDetElemMisAlig[5][0] * factor; // These lines were
+    mDetElemMisAlig[3][1] = mDetElemMisAlig[5][1] * factor; // added to keep
+    mDetElemMisAlig[4][0] = mDetElemMisAlig[5][0] * factor; // backward
+    mDetElemMisAlig[4][1] = mDetElemMisAlig[5][1] * factor; // compatibility
   } else {
     LOG(ERROR) << "Invalid XY angular misalign factor, " << factor;
   }
 }
 
 //_________________________________________________________________________
-void MisAligner::SetZCartMisAligFactor(double factor)
+void MisAligner::setZCartMisAligFactor(double factor)
 {
   /// Set XY angular misalign factor
   if (TMath::Abs(factor) < 1.0 && factor > 0.) {
-    fZCartMisAligFactor = factor;
-    fDetElemMisAlig[2][0] = fDetElemMisAlig[0][0];          // These lines were added to
-    fDetElemMisAlig[2][1] = fDetElemMisAlig[0][1] * factor; // keep backward compatibility
-  } else
+    mZCartMisAligFactor = factor;
+    mDetElemMisAlig[2][0] = mDetElemMisAlig[0][0];          // These lines were added to
+    mDetElemMisAlig[2][1] = mDetElemMisAlig[0][1] * factor; // keep backward compatibility
+  } else {
     LOG(ERROR) << Form("Invalid Z cartesian misalign factor, %f", factor);
+  }
 }
 
 //_________________________________________________________________________
-void MisAligner::GetUniMisAlign(double cartMisAlig[3], double angMisAlig[3], const double lParMisAlig[6][2]) const
+void MisAligner::getUniMisAlign(double cartMisAlig[3], double angMisAlig[3], const double lParMisAlig[6][2]) const
 {
   /// Misalign using uniform distribution
   /**
-    misalign the centre of the local transformation
-    rotation axes :
-    fAngMisAlig[1,2,3] = [x,y,z]
-    Assume that misalignment about the x and y axes (misalignment of z plane)
-    is much smaller, since the entire detection plane has to be moved (the
-    detection elements are on a support structure), while rotation of the x-y
-    plane is more free.
-  */
+   misalign the centre of the local transformation
+   rotation axes :
+   fAngMisAlig[1,2,3] = [x,y,z]
+   Assume that misalignment about the x and y axes (misalignment of z plane)
+   is much smaller, since the entire detection plane has to be moved (the
+   detection elements are on a support structure), while rotation of the x-y
+   plane is more free.
+   */
   cartMisAlig[0] = gRandom->Uniform(-lParMisAlig[0][1] + lParMisAlig[0][0], lParMisAlig[0][0] + lParMisAlig[0][1]);
   cartMisAlig[1] = gRandom->Uniform(-lParMisAlig[1][1] + lParMisAlig[1][0], lParMisAlig[1][0] + lParMisAlig[1][1]);
   cartMisAlig[2] = gRandom->Uniform(-lParMisAlig[2][1] + lParMisAlig[2][0], lParMisAlig[2][0] + lParMisAlig[2][1]);
@@ -222,18 +221,18 @@ void MisAligner::GetUniMisAlign(double cartMisAlig[3], double angMisAlig[3], con
 }
 
 //_________________________________________________________________________
-void MisAligner::GetGausMisAlign(double cartMisAlig[3], double angMisAlig[3], const double lParMisAlig[6][2]) const
+void MisAligner::getGausMisAlign(double cartMisAlig[3], double angMisAlig[3], const double lParMisAlig[6][2]) const
 {
   /// Misalign using gaussian distribution
   /**
-    misalign the centre of the local transformation
-    rotation axes :
-    fAngMisAlig[1,2,3] = [x,y,z]
-    Assume that misalignment about the x and y axes (misalignment of z plane)
-    is much smaller, since the entire detection plane has to be moved (the
-    detection elements are on a support structure), while rotation of the x-y
-    plane is more free.
-  */
+   misalign the centre of the local transformation
+   rotation axes :
+   fAngMisAlig[1,2,3] = [x,y,z]
+   Assume that misalignment about the x and y axes (misalignment of z plane)
+   is much smaller, since the entire detection plane has to be moved (the
+   detection elements are on a support structure), while rotation of the x-y
+   plane is more free.
+   */
   cartMisAlig[0] = gRandom->Gaus(lParMisAlig[0][0], lParMisAlig[0][1]); //, 3. * lParMisAlig[0][1]);
   cartMisAlig[1] = gRandom->Gaus(lParMisAlig[1][0], lParMisAlig[1][1]); //, 3. * lParMisAlig[1][1]);
   cartMisAlig[2] = gRandom->Gaus(lParMisAlig[2][0], lParMisAlig[2][1]); //, 3. * lParMisAlig[2][1]);
@@ -244,7 +243,7 @@ void MisAligner::GetGausMisAlign(double cartMisAlig[3], double angMisAlig[3], co
 }
 
 //_________________________________________________________________________
-TGeoCombiTrans MisAligner::MisAlignDetElem() const
+TGeoCombiTrans MisAligner::misAlignDetElem() const
 {
   /// Misalign given transformation and return the misaligned transformation.
   /// Use misalignment parameters for detection elements.
@@ -258,13 +257,13 @@ TGeoCombiTrans MisAligner::MisAlignDetElem() const
   double cartMisAlig[3] = {0, 0, 0};
   double angMisAlig[3] = {0, 0, 0};
 
-  if (fUseUni) {
-    GetUniMisAlign(cartMisAlig, angMisAlig, fDetElemMisAlig);
+  if (mUseUni) {
+    getUniMisAlign(cartMisAlig, angMisAlig, mDetElemMisAlig);
   } else {
-    if (!fUseGaus) {
+    if (!mUseGaus) {
       LOG(WARN) << Form("Neither uniform nor gausian distribution is set! Will use gausian...");
     }
-    GetGausMisAlign(cartMisAlig, angMisAlig, fDetElemMisAlig);
+    getGausMisAlign(cartMisAlig, angMisAlig, mDetElemMisAlig);
   }
 
   TGeoTranslation deltaTrans(cartMisAlig[0], cartMisAlig[1], cartMisAlig[2]);
@@ -282,7 +281,7 @@ TGeoCombiTrans MisAligner::MisAlignDetElem() const
 }
 
 //_________________________________________________________________________
-TGeoCombiTrans MisAligner::MisAlignModule() const
+TGeoCombiTrans MisAligner::misAlignModule() const
 {
   /// Misalign given transformation and return the misaligned transformation.
   /// Use misalignment parameters for modules.
@@ -296,13 +295,13 @@ TGeoCombiTrans MisAligner::MisAlignModule() const
   double cartMisAlig[3] = {0, 0, 0};
   double angMisAlig[3] = {0, 0, 0};
 
-  if (fUseUni) {
-    GetUniMisAlign(cartMisAlig, angMisAlig, fModuleMisAlig);
+  if (mUseUni) {
+    getUniMisAlign(cartMisAlig, angMisAlig, mModuleMisAlig);
   } else {
-    if (!fUseGaus) {
+    if (!mUseGaus) {
       LOG(WARN) << Form("Neither uniform nor gausian distribution is set! Will use gausian...");
     }
-    GetGausMisAlign(cartMisAlig, angMisAlig, fModuleMisAlig);
+    getGausMisAlign(cartMisAlig, angMisAlig, mModuleMisAlig);
   }
 
   TGeoTranslation deltaTrans(cartMisAlig[0], cartMisAlig[1], cartMisAlig[2]);
@@ -320,7 +319,8 @@ TGeoCombiTrans MisAligner::MisAlignModule() const
 }
 
 //______________________________________________________________________
-void MisAligner::MisAlign(Bool_t verbose)
+// void MisAligner::MisAlign(Bool_t verbose) const
+void MisAligner::misAlign(std::vector<o2::detectors::AlignParam>& params, Bool_t verbose) const
 {
   /// Takes the internal geometry module transformers, copies them to
   /// new geometry module transformers.
@@ -365,7 +365,7 @@ void MisAligner::MisAlign(Bool_t verbose)
                                        {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1020, 1021, 1022, 1023, 1024, 1025},
                                        {1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019}};
 
-  std::vector<o2::detectors::AlignParam> params;
+  // std::vector<o2::detectors::AlignParam> params;
 
   o2::detectors::AlignParam lAP;
   for (int hc = 0; hc < 20; hc++) { // module transformers
@@ -380,50 +380,52 @@ void MisAligner::MisAlign(Bool_t verbose)
     //   TGeoCombiTrans(*kModuleTransformer->GetTransformation());
     // New module transformation
     LOG(INFO) << "Will MisAlignModule " << hc;
-    TGeoCombiTrans localDeltaTransform = MisAlignModule();
+    TGeoCombiTrans localDeltaTransform = misAlignModule();
 
     // localDeltaTransform.Print();
     std::string sname = fmt::format("MCH/HC{}", hc);
     LOG(INFO) << "symName is " << sname.c_str();
     // newModuleTransformer->SetTransformation(newModuleTransform);
     lAP.setSymName(sname.c_str());
-    LOG(DEBUG) << "local delta params";
+    LOG(INFO) << "local delta params";
     double lPsi, lTheta, lPhi = 0.;
-    if (!matrixToAngles(localDeltaTransform.GetRotationMatrix(), lPsi, lTheta, lPhi)) {
+    if (!isMatrixConvertedToAngles(localDeltaTransform.GetRotationMatrix(), lPsi, lTheta, lPhi)) {
       LOG(ERROR) << "Problem extracting angles!";
     }
-    LOG(DEBUG) << fmt::format("{} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), localDeltaTransform.GetTranslation()[0],
-                              localDeltaTransform.GetTranslation()[1], localDeltaTransform.GetTranslation()[2], lPsi, lTheta, lPhi);
+    LOG(INFO) << fmt::format("{} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), localDeltaTransform.GetTranslation()[0],
+                             localDeltaTransform.GetTranslation()[1], localDeltaTransform.GetTranslation()[2], lPsi, lTheta, lPhi);
     if (!lAP.setLocalParams(localDeltaTransform)) {
       LOG(ERROR) << "Could not set local params for " << sname.c_str();
     }
-    LOG(DEBUG) << "global delta params";
-    LOG(DEBUG) << fmt::format("{} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), lAP.getX(),
-                              lAP.getY(), lAP.getZ(), lAP.getPsi(), lAP.getTheta(), lAP.getPhi());
-    // lAP.Print();
+    LOG(INFO) << "global delta params";
+    LOG(INFO) << fmt::format("{} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), lAP.getX(),
+                             lAP.getY(), lAP.getZ(), lAP.getPsi(), lAP.getTheta(), lAP.getPhi());
+    // lAP.print();
+    lAP.applyToGeometry();
     params.emplace_back(lAP);
     for (int de = 0; de < DEofHC[hc].size(); de++) {
       LOG(INFO) << "  Will MisAlignDetElem " << DEofHC[hc][de];
-      localDeltaTransform = MisAlignDetElem();
+      localDeltaTransform = misAlignDetElem();
 
       sname = fmt::format("MCH/HC{}/DE{}", hc, DEofHC[hc][de]);
       LOG(INFO) << "  symName is " << sname.c_str();
       lAP.setSymName(sname.c_str());
-      LOG(DEBUG) << "  local delta params";
-      if (!matrixToAngles(localDeltaTransform.GetRotationMatrix(), lPsi, lTheta, lPhi)) {
+      LOG(INFO) << "  local delta params";
+      if (!isMatrixConvertedToAngles(localDeltaTransform.GetRotationMatrix(), lPsi, lTheta, lPhi)) {
         LOG(ERROR) << "Problem extracting angles!";
       }
-      LOG(DEBUG) << fmt::format("{} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), localDeltaTransform.GetTranslation()[0],
-                                localDeltaTransform.GetTranslation()[1], localDeltaTransform.GetTranslation()[2], lPsi, lTheta, lPhi);
+      LOG(INFO) << fmt::format("{} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), localDeltaTransform.GetTranslation()[0],
+                               localDeltaTransform.GetTranslation()[1], localDeltaTransform.GetTranslation()[2], lPsi, lTheta, lPhi);
       if (!lAP.setLocalParams(localDeltaTransform)) {
         LOG(ERROR) << "  Could not set local params for " << sname.c_str();
       }
-      LOG(DEBUG) << "  global delta params";
-      LOG(DEBUG) << fmt::format("  {} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), lAP.getX(),
-                                lAP.getY(), lAP.getZ(), lAP.getPsi(), lAP.getTheta(), lAP.getPhi());
+      LOG(INFO) << "  global delta params";
+      LOG(INFO) << fmt::format("  {} : {} | X: {:+f} Y: {:+f} Z: {:+f} | pitch: {:+f} roll: {:+f} yaw: {:+f}\n", lAP.getSymName(), lAP.getAlignableID(), lAP.getX(),
+                               lAP.getY(), lAP.getZ(), lAP.getPsi(), lAP.getTheta(), lAP.getPhi());
       params.emplace_back(lAP);
+      lAP.applyToGeometry();
     }
-
+    /*
     const std::string& ccdbHost = "http://localhost:8080";
     long tmin = 0;
     long tmax = -1;
@@ -431,21 +433,22 @@ void MisAligner::MisAlign(Bool_t verbose)
     const std::string& fileName = "MCHMisAlignment.root";
 
     if (!ccdbHost.empty()) {
-      std::string path = objectPath.empty() ? o2::base::DetectorNameConf::getAlignmentPath(detMCH) : objectPath;
-      LOGP(info, "Storing alignment object on {}/{}", ccdbHost, path);
-      o2::ccdb::CcdbApi api;
-      map<string, string> metadata; // can be empty
-      api.init(ccdbHost.c_str());   // or http://localhost:8080 for a local installation
-      // store abitrary user object in strongly typed manner
-      api.storeAsTFileAny(&params, path, metadata, tmin, tmax);
+        std::string path = objectPath.empty() ? o2::base::NameConf::getAlignmentPath(detMCH) : objectPath;
+        LOGP(info, "Storing alignment object on {}/{}", ccdbHost, path);
+        o2::ccdb::CcdbApi api;
+        map<string, string> metadata; // can be empty
+        api.init(ccdbHost.c_str());   // or http://localhost:8080 for a local installation
+        // store abitrary user object in strongly typed manner
+        api.storeAsTFileAny(&params, path, metadata, tmin, tmax);
     }
 
     if (!fileName.empty()) {
-      LOGP(info, "Storing ITS alignment in local file {}", fileName);
-      TFile algFile(fileName.c_str(), "recreate");
-      algFile.WriteObjectAny(&params, "std::vector<o2::detectors::AlignParam>", "alignment");
-      algFile.Close();
+        LOGP(info, "Storing ITS alignment in local file {}", fileName);
+        TFile algFile(fileName.c_str(), "recreate");
+        algFile.WriteObjectAny(&params, "std::vector<o2::detectors::AlignParam>", "alignment");
+        algFile.Close();
     }
+     */
     // Get delta transformation:
     // Tdelta = Tnew * Told.inverse
     // TGeoHMatrix deltaModuleTransform =
@@ -501,11 +504,16 @@ void MisAligner::MisAlign(Bool_t verbose)
     //     ->AddMisAlignDetElement(detElement->GetId(), deltaGlobalTransform);
     // }
 
-    if (verbose)
+    if (verbose) {
       LOG(INFO) << Form("MisAligned half chamber %i", hc);
+    }
     // newGeometryTransformer->AddModuleTransformer(newModuleTransformer);
   }
   // return newGeometryTransformer;
+}
+
+void MisAligner::setAlignmentResolution(const TClonesArray* misAlignArray, int rChId, double rChResX, double rChResY, double rDeResX, double rDeResY)
+{
 }
 
 // void MisAligner::SetAlignmentResolution(const TClonesArray* misAlignArray, int rChId, double rChResX, double rChResY, double rDeResX, double rDeResY)
@@ -513,10 +521,10 @@ void MisAligner::MisAlign(Bool_t verbose)
 
 //   int chIdMin = (rChId < 0) ? 0 : rChId;
 //   int chIdMax = (rChId < 0) ? 9 : rChId;
-//   double chResX = (rChResX < 0) ? fModuleMisAlig[0][1] : rChResX;
-//   double chResY = (rChResY < 0) ? fModuleMisAlig[1][1] : rChResY;
-//   double deResX = (rDeResX < 0) ? fDetElemMisAlig[0][1] : rDeResX;
-//   double deResY = (rDeResY < 0) ? fDetElemMisAlig[1][1] : rDeResY;
+//   double chResX = (rChResX < 0) ? mModuleMisAlig[0][1] : rChResX;
+//   double chResY = (rChResY < 0) ? mModuleMisAlig[1][1] : rChResY;
+//   double deResX = (rDeResX < 0) ? mDetElemMisAlig[0][1] : rDeResX;
+//   double deResY = (rDeResY < 0) ? mDetElemMisAlig[1][1] : rDeResY;
 
 //   TMatrixDSym mChCorrMatrix(6);
 //   mChCorrMatrix[0][0] = chResX * chResX;
@@ -548,10 +556,10 @@ void MisAligner::MisAlign(Bool_t verbose)
 //             (volName.Length() == volName.Index(chName2) + chName2.Length())))) {
 //         volName.Remove(0, volName.Last('/') + 1);
 //         if (volName.Contains("HC")) {
-//           //	alignMat->Print("NULL");
+//           //    alignMat->Print("NULL");
 //           alignMat->SetCorrMatrix(mChCorrMatrix);
 //         } else if (volName.Contains("DE")) {
-//           //	alignMat->Print("NULL");
+//           //    alignMat->Print("NULL");
 //           alignMat->SetCorrMatrix(mDECorrMatrix);
 //         }
 //       }
