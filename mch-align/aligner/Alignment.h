@@ -59,7 +59,7 @@ class LocalTrackParam
   double fTrackZ = 0.0;
   double fTrackSlopeX = 0.0;
   double fTrackSlopeY = 0.0;
-}; //class LocalTrackParam
+}; // class LocalTrackParam
 
 class Alignment : public TObject
 {
@@ -180,10 +180,10 @@ class Alignment : public TObject
   void SetSigmaXY(Double_t sigmaX, Double_t sigmaY);
 
   /// Set geometry transformer
-  //void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
+  // void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
   //{
-  //   fTransform = transformer;
-  //}
+  //    fTransform = transformer;
+  // }
 
   //@}
 
@@ -426,8 +426,8 @@ class Alignment : public TObject
   /// output TTree
   TTree* fTTree;
 
-}; //class Alignment
+}; // class Alignment
 
-} //namespace mch
-} //namespace o2
+} // namespace mch
+} // namespace o2
 #endif // ALICEO2_MCH_ALIGNMENT_H_

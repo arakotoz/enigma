@@ -45,7 +45,7 @@
 #include "MCHGeometryTransformer/Transformations.h"
 #include "TGeoManager.h"
 
-// #include "Align/Millepede2Record.h" //to be replaced 
+// #include "Align/Millepede2Record.h" //to be replaced
 // #include "AliMpExMap.h"
 // #include "AliMpExMapIterator.h"
 
@@ -191,11 +191,11 @@ Alignment::Alignment()
 }
 
 //_____________________________________________________________________
-//Alignment::~Alignment()
+// Alignment::~Alignment()
 //{
 //  /// destructor
 //}
-//Alignment::~Alignment() = default;
+// Alignment::~Alignment() = default;
 //_____________________________________________________________________
 void Alignment::init(void)
 {
@@ -264,23 +264,23 @@ void Alignment::init(void)
   }
 
   // Set iterations
-  if (fStartFac > 1){
+  if (fStartFac > 1) {
     fMillepede->SetIterations(fStartFac);
   }
-    // setup monitoring TFile
-    if (fDoEvaluation && fRefitStraightTracks) {
-      fTFile = new TFile("Alignment.root", "RECREATE");
-      fTTree = new TTree("TreeE", "Evaluation");
+  // setup monitoring TFile
+  if (fDoEvaluation && fRefitStraightTracks) {
+    fTFile = new TFile("Alignment.root", "RECREATE");
+    fTTree = new TTree("TreeE", "Evaluation");
 
-      const Int_t kSplitlevel = 98;
-      const Int_t kBufsize = 32000;
+    const Int_t kSplitlevel = 98;
+    const Int_t kBufsize = 32000;
 
-      fTrackParamOrig = new LocalTrackParam();
-      fTTree->Branch("fTrackParamOrig", "LocalTrackParam", &fTrackParamOrig, kBufsize, kSplitlevel);
+    fTrackParamOrig = new LocalTrackParam();
+    fTTree->Branch("fTrackParamOrig", "LocalTrackParam", &fTrackParamOrig, kBufsize, kSplitlevel);
 
-      fTrackParamNew = new LocalTrackParam();
-      fTTree->Branch("fTrackParamNew", "LocalTrackParam", &fTrackParamNew, kBufsize, kSplitlevel);
-    }
+    fTrackParamNew = new LocalTrackParam();
+    fTTree->Branch("fTrackParamNew", "LocalTrackParam", &fTrackParamNew, kBufsize, kSplitlevel);
+  }
 }
 
 //_____________________________________________________
@@ -305,8 +305,8 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Do
 
   // reset track records
   fTrackRecord.Reset();
-  if (fMillepede->GetRecord()){
-     fMillepede->GetRecord()->Reset();
+  if (fMillepede->GetRecord()) {
+    fMillepede->GetRecord()->Reset();
   }
 
   // loop over clusters to get starting values
@@ -439,7 +439,7 @@ void Alignment::ProcessTrack(AliMillePedeRecord* trackRecord)
     return;
 
   // // make sure record storage is initialized
-  if (!fMillepede->GetRecord()){
+  if (!fMillepede->GetRecord()) {
     fMillepede->InitDataRecStorage(kFalse);
   }
   // // copy content
@@ -899,17 +899,17 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
   LOG(info) << "Used " << lNDetElem << " DetElem, MeanZ= " << lMeanZ << ", SigmaZ= " << lSigmaZ;
 
   // create all possible arrays
-  Array fConstraintX[4];  //Array for constraint equation X
-  Array fConstraintY[4];  //Array for constraint equation Y
-  Array fConstraintP[4];  //Array for constraint equation P
-  Array fConstraintXZ[4]; //Array for constraint equation X vs Z
-  Array fConstraintYZ[4]; //Array for constraint equation Y vs Z
-  Array fConstraintPZ[4]; //Array for constraint equation P vs Z
+  Array fConstraintX[4];  // Array for constraint equation X
+  Array fConstraintY[4];  // Array for constraint equation Y
+  Array fConstraintP[4];  // Array for constraint equation P
+  Array fConstraintXZ[4]; // Array for constraint equation X vs Z
+  Array fConstraintYZ[4]; // Array for constraint equation Y vs Z
+  Array fConstraintPZ[4]; // Array for constraint equation P vs Z
 
   // do we really need these ?
-  Array fConstraintXY[4]; //Array for constraint equation X vs Y
-  Array fConstraintYY[4]; //Array for constraint equation Y vs Y
-  Array fConstraintPY[4]; //Array for constraint equation P vs Y
+  Array fConstraintXY[4]; // Array for constraint equation X vs Y
+  Array fConstraintYY[4]; // Array for constraint equation Y vs Y
+  Array fConstraintPY[4]; // Array for constraint equation P vs Y
 
   // fill Bool_t sides array based on masks, for convenience
   Bool_t lDetTLBR[4];
@@ -939,7 +939,7 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
     auto fTransform = fTransformCreator(lDetElemId);
     o2::math_utils::Point3D<double> SlatPos{0.0, 0.0, 0.0};
     o2::math_utils::Point3D<double> GlobalPos;
-    
+
     fTransform.LocalToMaster(SlatPos, GlobalPos);
     lDetElemGloX = GlobalPos.x();
     lDetElemGloY = GlobalPos.y();
@@ -1340,11 +1340,11 @@ void Alignment::SetAlignmentResolution(const TClonesArray* misAlignArray, Int_t 
             (volName.Length() == volName.Index(chName2) + chName2.Length())))) {
 
         volName.Remove(0, volName.Last('/') + 1);
-        //if (volName.Contains("GM")){
-        //  alignMat->SetCorrMatrix(mChCorrMatrix);
-        //}else if (volName.Contains("DE")){
-        //  alignMat->SetCorrMatrix(mDECorrMatrix);
-        //}
+        // if (volName.Contains("GM")){
+        //   alignMat->SetCorrMatrix(mChCorrMatrix);
+        // }else if (volName.Contains("DE")){
+        //   alignMat->SetCorrMatrix(mDECorrMatrix);
+        // }
       }
     }
   }

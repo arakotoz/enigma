@@ -98,7 +98,7 @@ double signalParam[4] = {80., 16., 12., 1.2};
 uint16_t minNSamplesBackground = 14;
 double backgroundParam[4] = {18., 24., -20., 7.};
 int bcIntegrationRange = 6; // time window ([-range, range]) to integrate digits
-int minNDigitsSignal = 10; // minimum number of digits passing the signal cuts to select signal events
+int minNDigitsSignal = 10;  // minimum number of digits passing the signal cuts to select signal events
 
 constexpr double pi() { return 3.14159265358979323846; }
 std::tuple<TFile*, TTreeReader*> LoadData(const char* fileName, const char* treeName);
@@ -402,7 +402,7 @@ void LoadDigits(TrackInfo& trackInfo, const std::vector<mch::Cluster>& clusters,
     // get the pads at the cluster position
     math_utils::Point3D<float> global{cluster.x, cluster.y, cluster.z};
     auto t = transformation(cluster.getDEId());
-    auto local = t^(global);
+    auto local = t ^ (global);
     int padIDNB(-1), padIDB(-1);
     auto& segmentation = mch::mapping::segmentation(cluster.getDEId());
     bool padsFound = segmentation.findPadPairByPosition(local.x(), local.y(), padIDB, padIDNB);

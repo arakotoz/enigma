@@ -17,7 +17,6 @@
 #include "DataFormatsITSMFT/ROFRecord.h"
 #include "CommonDataFormat/InteractionRecord.h"
 
-
 using namespace std;
 using namespace o2::base;
 using namespace o2::detectors;
@@ -25,11 +24,12 @@ using o2::itsmft::Digit;
 using o2::itsmft::ROFRecord;
 using BCData = o2::InteractionRecord;
 
-void summarise_digits(const UInt_t tfStart = 1, UInt_t runNumber = 503581){
+void summarise_digits(const UInt_t tfStart = 1, UInt_t runNumber = 503581)
+{
 
   TChain o2MFTDigitsChain("o2sim");
 
-  //o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_aroundtf10022.root"); // tfStart = 10021
+  // o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_aroundtf10022.root"); // tfStart = 10021
 
   o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_00.root");
   o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_01.root");
@@ -62,36 +62,36 @@ void summarise_digits(const UInt_t tfStart = 1, UInt_t runNumber = 503581){
   o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_26.root");
   o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_27.root");
   o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_28.root");
-  o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_29.root");  
+  o2MFTDigitsChain.Add("/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_group_tflist_29.root");
 
-  std::vector<o2::itsmft::Digit>* mftdigit  = nullptr;
+  std::vector<o2::itsmft::Digit>* mftdigit = nullptr;
   std::vector<o2::itsmft::ROFRecord>* mftdigitROFs = nullptr;
-  o2MFTDigitsChain.SetBranchAddress("MFTDigit", &mftdigit );
+  o2MFTDigitsChain.SetBranchAddress("MFTDigit", &mftdigit);
   o2MFTDigitsChain.SetBranchAddress("MFTDigitROF", &mftdigitROFs);
 
   UInt_t numberTF = o2MFTDigitsChain.GetEntries();
   std::cout << "Number of TF = " << numberTF << std::endl;
 
-  std::stringstream runNumberName; runNumberName << runNumber;
+  std::stringstream runNumberName;
+  runNumberName << runNumber;
   std::string outputFileName = "/Users/andry/alice/commissioning/tedshots/2021-10-08/run503581/mftdigits_summary_run";
   outputFileName += runNumberName.str() + ".root";
 
-  TFile *outputFile = new TFile(outputFileName.c_str(), "recreate");
-  
-  TTree* summaryTree = new TTree("summary","the summary tree");
+  TFile* outputFile = new TFile(outputFileName.c_str(), "recreate");
+
+  TTree* summaryTree = new TTree("summary", "the summary tree");
   UInt_t tfId = tfStart;
   UInt_t orbit = 0;
   UInt_t bc = 0;
   UInt_t strobe = 0;
   UInt_t nDigits = 0;
-	summaryTree->Branch("tfId",    &tfId,    "tfId/i");
-	summaryTree->Branch("orbit",   &orbit,   "orbit/i");
-	summaryTree->Branch("bc",      &bc,      "bc/i");
-	summaryTree->Branch("strobe",  &strobe,  "strobe/i");
-	summaryTree->Branch("nDigits", &nDigits, "nDigits/i");	
+  summaryTree->Branch("tfId", &tfId, "tfId/i");
+  summaryTree->Branch("orbit", &orbit, "orbit/i");
+  summaryTree->Branch("bc", &bc, "bc/i");
+  summaryTree->Branch("strobe", &strobe, "strobe/i");
+  summaryTree->Branch("nDigits", &nDigits, "nDigits/i");
 
-  for (UInt_t itf = 0; itf < numberTF; itf++)
-  {
+  for (UInt_t itf = 0; itf < numberTF; itf++) {
     tfId = tfStart + itf;
     o2MFTDigitsChain.GetEvent(itf);
     auto nStrobesPerTF = mftdigitROFs->size();
@@ -101,13 +101,13 @@ void summarise_digits(const UInt_t tfStart = 1, UInt_t runNumber = 503581){
     std::cout << "- Number of MFT Digits = " << nDigitsPerTF << std::endl;
 
     strobe = 0;
-    for ( auto rofRec : *mftdigitROFs ) { // iterate over the ROF records
+    for (auto rofRec : *mftdigitROFs) { // iterate over the ROF records
       auto& bcdata = (*mftdigitROFs)[strobe].getBCData();
       orbit = bcdata.orbit; // uint32_t
-      bc = bcdata.bc; // uint16_t
+      bc = bcdata.bc;       // uint16_t
       nDigits = rofRec.getNEntries();
       if (false) {
-        std::cout << "\tstrobe = " << strobe << "\torbit = "<< orbit << "\tbc = " << bc << "\t\tnDigits = " << nDigits << std::endl;
+        std::cout << "\tstrobe = " << strobe << "\torbit = " << orbit << "\tbc = " << bc << "\t\tnDigits = " << nDigits << std::endl;
       }
       summaryTree->Fill();
       strobe++;
@@ -115,11 +115,10 @@ void summarise_digits(const UInt_t tfStart = 1, UInt_t runNumber = 503581){
   }
   summaryTree->Write();
 
-  TTree* inputParamTree = new TTree( "inputParam", "the input parameters" );
-  inputParamTree->Branch( "runNumber", &runNumber, "runNumber/i" );
+  TTree* inputParamTree = new TTree("inputParam", "the input parameters");
+  inputParamTree->Branch("runNumber", &runNumber, "runNumber/i");
   inputParamTree->Fill();
   inputParamTree->Write();
-  
+
   outputFile->Close();
 }
-
