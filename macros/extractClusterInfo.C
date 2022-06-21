@@ -131,15 +131,24 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
   tree->Branch("measuredGlobalX", &hitInfo.measuredGlobalX, "measuredGlobalX/D");
   tree->Branch("measuredGlobalY", &hitInfo.measuredGlobalY, "measuredGlobalY/D");
   tree->Branch("measuredGlobalZ", &hitInfo.measuredGlobalZ, "measuredGlobalZ/D");
+  tree->Branch("measuredLocalX", &hitInfo.measuredLocalX, "measuredLocalX/D");
+  tree->Branch("measuredLocalY", &hitInfo.measuredLocalY, "measuredLocalY/D");
+  tree->Branch("measuredLocalZ", &hitInfo.measuredLocalZ, "measuredLocalZ/D");
   tree->Branch("measuredSigmaX2", &hitInfo.measuredSigmaX2, "measuredSigmaX2/D");
   tree->Branch("measuredSigmaY2", &hitInfo.measuredSigmaY2, "measuredSigmaY2/D");
   tree->Branch("measuredSigmaZ2", &hitInfo.measuredSigmaZ2, "measuredSigmaZ2/D");
   tree->Branch("recoGlobalX", &hitInfo.recoGlobalX, "recoGlobalX/D");
   tree->Branch("recoGlobalY", &hitInfo.recoGlobalY, "recoGlobalY/D");
   tree->Branch("recoGlobalZ", &hitInfo.recoGlobalZ, "recoGlobalZ/D");
+  tree->Branch("recoLocalX", &hitInfo.recoLocalX, "recoLocalX/D");
+  tree->Branch("recoLocalY", &hitInfo.recoLocalY, "recoLocalY/D");
+  tree->Branch("recoLocalZ", &hitInfo.recoLocalZ, "recoLocalZ/D");
   tree->Branch("residualX", &hitInfo.residualX, "residualX/D");
   tree->Branch("residualY", &hitInfo.residualY, "residualY/D");
   tree->Branch("residualZ", &hitInfo.residualZ, "residualZ/D");
+  tree->Branch("residualLocalX", &hitInfo.residualLocalX, "residualLocalX/D");
+  tree->Branch("residualLocalY", &hitInfo.residualLocalY, "residualLocalY/D");
+  tree->Branch("residualLocalZ", &hitInfo.residualLocalZ, "residualLocalZ/D");
 
   // loop on both chains
 
@@ -190,10 +199,13 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
         auto clsEntry = trackClusterRefs[offset + icls];
         assert(clsEntry < mftHits.size());
         track.propagateParamToZlinear(mftHits[clsEntry].clusterGlobalZ());
-        mftHits[clsEntry].setTrackGlobalPosition(
+        mftHits[clsEntry].setTrackPosition(
           track.getX(),
           track.getY(),
-          track.getZ());
+          track.getZ(),
+          Hit::isGlobal);
+        mftHits[clsEntry].convertT2LTrackPosition(
+          compClusters[clsEntry].getChipID(), geom);
         mftHits[clsEntry].setTrackIdx(trackIdx);
       }
       if (track.isCA()) {
