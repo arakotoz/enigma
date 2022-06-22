@@ -85,11 +85,6 @@ class Hit
                              o2::itsmft::ChipMappingMFT chipMappingMFT,
                              o2::itsmft::TopologyDictionary& dict);
 
-  // convert a track 3D spacepoint from glocal to local coordinates
-
-  void convertT2LTrackPosition(UShort_t chipID,
-                               o2::mft::GeometryTGeo* geom);
-
   // short-named getters
 
   UInt_t bc() const { return mBc; }
@@ -128,6 +123,11 @@ class Hit
   double clusterLocalZ() const { return clusterZ(isLocal); }
   UShort_t disk() const { return mDisk; }
   UShort_t half() const { return mHalf; }
+
+  // convert a track 3D spacepoint from glocal to local coordinates
+  void globalToLocal(UShort_t chipID,
+                     o2::mft::GeometryTGeo* geom);
+
   Bool_t isInTrack() const { return (mTrackIdx > -1) ? kTRUE : kFALSE; }
   UShort_t layer() const { return mLayer; }
   UShort_t orbit() const { return mOrbit; }
@@ -614,10 +614,10 @@ void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
 }
 
 //_________________________________________________________
-void Hit::convertT2LTrackPosition(UShort_t chipID,
-                                  o2::mft::GeometryTGeo* geom)
+void Hit::globalToLocal(UShort_t chipID,
+                        o2::mft::GeometryTGeo* geom)
 {
   // Transformation tracking (global) --> local coordinates
-  auto locXYZ = geom->getMatrixT2L(chipID) * getTrackXYZ(isGlobal);
+  auto locXYZ = geom->getMatrixL2G(chipID).ApplyInverse(getTrackXYZ(isGlobal));
   setTrackPosition(locXYZ, isLocal);
 }

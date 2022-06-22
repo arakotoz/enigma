@@ -204,7 +204,7 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
           track.getY(),
           track.getZ(),
           Hit::isGlobal);
-        mftHits[clsEntry].convertT2LTrackPosition(
+        mftHits[clsEntry].globalToLocal(
           compClusters[clsEntry].getChipID(), geom);
         mftHits[clsEntry].setTrackIdx(trackIdx);
       }
