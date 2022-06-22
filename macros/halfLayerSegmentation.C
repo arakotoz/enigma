@@ -1582,14 +1582,91 @@ void genMap()
   std::cout << "};" << std::endl;
 }
 
+// _______________________________________________________________________________
+void printSymNameChip()
+{
+  o2::base::GeometryManager::loadGeometry("", true);
+  o2::mft::GeometryTGeo* gman = o2::mft::GeometryTGeo::Instance();
+
+  Int_t iChip = 0;
+  Int_t nHalf = gman->getNumberOfHalfs();
+  TString sname = gman->composeSymNameMFT();
+
+  for (Int_t hf = 0; hf < nHalf; hf++) {
+    Int_t nDisks = gman->getNumberOfDisksPerHalf(hf);
+    sname = gman->composeSymNameHalf(hf);
+
+    for (Int_t dk = 0; dk < nDisks; dk++) {
+      sname = gman->composeSymNameDisk(hf, dk);
+
+      Int_t nLadders = 0;
+      for (Int_t sensor = gman->getMinSensorsPerLadder();
+           sensor < gman->getMaxSensorsPerLadder() + 1; sensor++) {
+        nLadders += gman->getNumberOfLaddersPerDisk(hf, dk, sensor);
+      }
+
+      for (Int_t lr = 0; lr < nLadders; lr++) { // nLadders
+        sname = gman->composeSymNameLadder(hf, dk, lr);
+        Int_t nSensorsPerLadder = gman->getNumberOfSensorsPerLadder(hf, dk, lr);
+
+        for (Int_t sr = 0; sr < nSensorsPerLadder; sr++) {
+          sname = gman->composeSymNameChip(hf, dk, lr, sr);
+          // Follow the geometrical order for sensors construction
+          Int_t chipID = o2::itsmft::ChipMappingMFT::mChipIDGeoToRO[iChip];
+          Int_t uid = o2::base::GeometryManager::getSensID(o2::detectors::DetID::MFT, chipID);
+          std::cout << "h " << hf
+                    << " d " << dk
+                    << " lr " << std::setw(3) << lr
+                    << " sr " << std::setw(4) << sr
+                    << " chipID " << std::setw(4) << chipID
+                    << " uid " << uid
+                    << " " << sname
+                    << " iChip " << iChip
+                    << std::endl;
+          iChip++;
+        }
+      }
+    }
+  }
+}
+
+// _______________________________________________________________________________
+void printSensorID()
+{
+  o2::base::GeometryManager::loadGeometry("", true);
+  o2::mft::GeometryTGeo* gman = o2::mft::GeometryTGeo::Instance();
+
+  TString sname = gman->composeSymNameMFT();
+
+  const int NChips = o2::itsmft::ChipMappingMFT::NChips;
+  for (Int_t iChip = 0; iChip < NChips; iChip++) {
+    Int_t hf = 0, dk = 0, lr = 0, sr = 0;
+    gman->getSensorID(iChip, hf, dk, lr, sr);
+    Int_t uid = o2::base::GeometryManager::getSensID(o2::detectors::DetID::MFT, iChip);
+    o2::itsmft::MFTChipMappingData chipMapping = (mMFTChipMapper.getChipMappingData())[iChip];
+    std::cout << "h " << hf << " " << (UShort_t)chipMapping.half
+              << " d " << dk << " " << (UShort_t)chipMapping.disk
+              << " layer " << (UShort_t)chipMapping.layer
+              << " z " << (UShort_t)chipMapping.zone
+              << " lr " << std::setw(3) << lr << " con " << std::setw(2) << (UShort_t)chipMapping.connector
+              << " sr " << std::setw(2) << sr << " " << std::setw(2) << (UShort_t)chipMapping.chipOnModule
+              << " iChip " << std::setw(4) << iChip << " tr " << std::setw(2) << (UShort_t)chipMapping.cable
+              << " uid " << uid
+              //              << " " << sname
+              << std::endl;
+  }
+}
+
 //_______________________________________________________________________________
 void halfLayerSegmentation()
 {
-  printChipsPerHalfLayer();
+  // printChipsPerHalfLayer();
   // printChipsPerHalfDisk();
   // printAllChipsInGeoOrder();
   // printAllLadders();
   // printAllChipsInGeoOrder();
   // printAllChips();
   // genMap();
+  // printSymNameChip();
+  printSensorID();
 }
