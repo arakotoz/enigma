@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+#include <TGeoMatrix.h>
 #include <TObject.h>
 #include <Rtypes.h>
 
@@ -230,33 +231,8 @@ class Hit
                           const double z,
                           const RefFrame_t refFrame = isGlobal)
   {
-    setClusterX(x, refFrame);
-    setClusterY(y, refFrame);
-    setClusterZ(z, refFrame);
-  }
-  void setClusterX(const double x, const RefFrame_t refFrame = isGlobal)
-  {
-    if (refFrame == isGlobal) {
-      mGlobalMeasuredPosition.SetX(x);
-    } else {
-      mLocalMeasuredPosition.SetX(x);
-    }
-  }
-  void setClusterY(const double y, const RefFrame_t refFrame = isGlobal)
-  {
-    if (refFrame == isGlobal) {
-      mGlobalMeasuredPosition.SetY(y);
-    } else {
-      mLocalMeasuredPosition.SetY(y);
-    }
-  }
-  void setClusterZ(const double z, const RefFrame_t refFrame = isGlobal)
-  {
-    if (refFrame == isGlobal) {
-      mGlobalMeasuredPosition.SetZ(z);
-    } else {
-      mLocalMeasuredPosition.SetZ(z);
-    }
+    const o2::math_utils::Point3D<double> position(x, y, z);
+    setClusterPosition(position, refFrame);
   }
   void setMeasuredErrors(const double sx2,
                          const double sy2, const double sz2)
@@ -286,33 +262,8 @@ class Hit
                         const double z,
                         const RefFrame_t refFrame = isGlobal)
   {
-    setTrackX(x, refFrame);
-    setTrackY(y, refFrame);
-    setTrackZ(z, refFrame);
-  }
-  void setTrackX(const double x, const RefFrame_t refFrame = isGlobal)
-  {
-    if (refFrame == isGlobal) {
-      mGlobalRecoPosition.SetX(x);
-    } else {
-      mLocalRecoPosition.SetX(x);
-    }
-  }
-  void setTrackY(const double y, const RefFrame_t refFrame = isGlobal)
-  {
-    if (refFrame == isGlobal) {
-      mGlobalRecoPosition.SetY(y);
-    } else {
-      mLocalRecoPosition.SetY(y);
-    }
-  }
-  void setTrackZ(const double z, const RefFrame_t refFrame = isGlobal)
-  {
-    if (refFrame == isGlobal) {
-      mGlobalRecoPosition.SetZ(z);
-    } else {
-      mLocalRecoPosition.SetZ(z);
-    }
+    const o2::math_utils::Point3D<double> position(x, y, z);
+    setTrackPosition(position, refFrame);
   }
   void setTrackIdx(const Int_t idx) { mTrackIdx = idx; }
 
@@ -347,9 +298,33 @@ class Hit
   o2::math_utils::Point3D<double> mLocalRecoPosition;
   // Cartesian position (cm, in Local frame) of the cluster
   o2::math_utils::Point3D<double> mLocalMeasuredPosition;
+  // All local coordinates are in sensor ref. frame
+  // (x, y, z)_loc : original local coordinates given by O2
+  // (x, z, z)^prime_loc : local coordinates from a local frame
+  // obtained from a simple translation of Alice global frame
+  // x_loc     -1   0   0       x^prime_loc
+  // y_loc  =   0   0  -1   *   y^prime_loc
+  // z_loc      0  -1   0       z^prime_loc
+  // The transformation Hit::mTransLprime2L allows to rotate
+  // the ()^prime_loc coordinates to obatin ()_loc i.e. the original
+  // local coordinates from O2.
+  static const TGeoHMatrix mRotMatrix;
+  static const o2::math_utils::Transform3D mTransLprime2L;
 
   ClassDefNV(Hit, 1);
 };
+
+const TGeoHMatrix Hit::mRotMatrix = [] {
+  double rot[9] = {
+    -1., 0., 0.,
+    0., 0., -1.,
+    0., -1., 0.};
+  TGeoHMatrix tmp;
+  tmp.SetRotation(rot);
+  return tmp;
+}();
+
+const o2::math_utils::Transform3D Hit::mTransLprime2L = o2::math_utils::Transform3D(Hit::mRotMatrix);
 
 //__________________________________________________________________________
 Hit::Hit()
@@ -604,7 +579,8 @@ void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
     o2::itsmft::ClusterPattern cPattern(pattIt);
     locXYZ = dict.getClusterCoordinates(c, cPattern, false);
   }
-  setClusterPosition(locXYZ, isLocal);
+  // Transformation local --> local prime coordinates
+  setClusterPosition(mTransLprime2L.ApplyInverse(locXYZ), isLocal);
   // Transformation local --> global coordinates
   auto gloXYZ = geom->getMatrixL2G(chipID) * locXYZ;
   setSensor(c.getSensorID(), chipMappingMFT);
@@ -619,5 +595,6 @@ void Hit::globalToLocal(UShort_t chipID,
 {
   // Transformation tracking (global) --> local coordinates
   auto locXYZ = geom->getMatrixL2G(chipID).ApplyInverse(getTrackXYZ(isGlobal));
-  setTrackPosition(locXYZ, isLocal);
+  // Transformation local --> local prime coordinates
+  setTrackPosition(mTransLprime2L.ApplyInverse(locXYZ), isLocal);
 }
