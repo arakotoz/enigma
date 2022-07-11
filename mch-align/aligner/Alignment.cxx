@@ -45,7 +45,7 @@
 #include "MCHGeometryTransformer/Transformations.h"
 #include "TGeoManager.h"
 
-// #include "Align/Millepede2Record.h" //to be replaced
+// #include "Align/Millepede2Record.h" //to be replaced 
 // #include "AliMpExMap.h"
 // #include "AliMpExMapIterator.h"
 
@@ -153,7 +153,7 @@ Alignment::Alignment()
     fDetElemNumber(0),
     fTrackRecord(),
     fTransformCreator(),
-    fGeoCombiTransInverse(),
+    //fGeoCombiTransInverse(),
     fDoEvaluation(kFALSE),
     fTrackParamOrig(0),
     fTrackParamNew(0),
@@ -191,13 +191,13 @@ Alignment::Alignment()
 }
 
 //_____________________________________________________________________
-// Alignment::~Alignment()
+//Alignment::~Alignment()
 //{
 //  /// destructor
 //}
-// Alignment::~Alignment() = default;
+//Alignment::~Alignment() = default;
 //_____________________________________________________________________
-void Alignment::init(void)
+void Alignment::init(std::string DataRecFName, std::string ConsRecFName)
 {
 
   /// initialize
@@ -248,6 +248,9 @@ void Alignment::init(void)
   // initialize millepede
   // fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial, fGlobalParameterStatus);
   fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial); // AliMillePede2 implementation
+  // fMillepede->InitDataRecStorage(kFALSE);
+  fMillepede->SetDataRecFName(DataRecFName);
+  fMillepede->SetConsRecFName(ConsRecFName);
 
   fInitialized = kTRUE;
 
@@ -264,28 +267,30 @@ void Alignment::init(void)
   }
 
   // Set iterations
-  if (fStartFac > 1) {
+  if (fStartFac > 1){
     fMillepede->SetIterations(fStartFac);
   }
-  // setup monitoring TFile
-  if (fDoEvaluation && fRefitStraightTracks) {
-    fTFile = new TFile("Alignment.root", "RECREATE");
-    fTTree = new TTree("TreeE", "Evaluation");
+    // setup monitoring TFile
+    if (fDoEvaluation && fRefitStraightTracks) {
+      fTFile = new TFile("Alignment.root", "RECREATE");
+      fTTree = new TTree("TreeE", "Evaluation");
 
-    const Int_t kSplitlevel = 98;
-    const Int_t kBufsize = 32000;
+      const Int_t kSplitlevel = 98;
+      const Int_t kBufsize = 32000;
 
-    fTrackParamOrig = new LocalTrackParam();
-    fTTree->Branch("fTrackParamOrig", "LocalTrackParam", &fTrackParamOrig, kBufsize, kSplitlevel);
+      fTrackParamOrig = new LocalTrackParam();
+      fTTree->Branch("fTrackParamOrig", "LocalTrackParam", &fTrackParamOrig, kBufsize, kSplitlevel);
 
-    fTrackParamNew = new LocalTrackParam();
-    fTTree->Branch("fTrackParamNew", "LocalTrackParam", &fTrackParamNew, kBufsize, kSplitlevel);
-  }
+      fTrackParamNew = new LocalTrackParam();
+      fTTree->Branch("fTrackParamNew", "LocalTrackParam", &fTrackParamNew, kBufsize, kSplitlevel);
+    }
 }
 
 //_____________________________________________________
 void Alignment::terminate(void)
 {
+  fMillepede->CloseDataRecStorage();
+  fInitialized = kFALSE;
   LOG(info) << "Closing Evaluation TFile";
   if (fTFile && fTTree) {
     fTFile->cd();
@@ -295,31 +300,35 @@ void Alignment::terminate(void)
 }
 
 //_____________________________________________________
-AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Double_t weight)
+AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::TransformationCreator& transformation, Bool_t doAlignment, Double_t weight)
 {
+  
   /// process track for alignment minimization
   /**
   returns the alignment records for this track.
   They can be stored in some output for later reprocessing.
   */
 
+  // cout << track.getNClusters() << " clusters loaded"<<endl;
+
   // reset track records
   fTrackRecord.Reset();
-  if (fMillepede->GetRecord()) {
-    fMillepede->GetRecord()->Reset();
+  if (fMillepede->GetRecord()){
+     fMillepede->GetRecord()->Reset();
   }
 
   // loop over clusters to get starting values
   Bool_t first(kTRUE);
   // if (!trackParam)
   // continue;
-  for (auto itTrackParam(track.begin()); itTrackParam != track.end(); ++itTrackParam) {
+  auto itTrackParam = track.begin();
+  for (; itTrackParam != track.end(); ++itTrackParam) {
 
     // get cluster
-    const Cluster* Cluster = itTrackParam->getClusterPtr();
+    const Cluster* cluster = itTrackParam->getClusterPtr();
     if (!cluster)
       continue;
-
+    //cout << "current cluster's detector ID: " << cluster->getDEId() <<endl;
     // for first valid cluster, save track position as "starting" values
     if (first) {
 
@@ -376,7 +385,8 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Do
   }
 
   // second loop to perform alignment
-  for (auto itTrackParam(track.begin()); itTrackParam != track.end(); ++itTrackParam) {
+  itTrackParam = track.begin();
+  for (; itTrackParam != track.end(); ++itTrackParam) {
 
     // get track parameters
     if (!&*itTrackParam)
@@ -388,13 +398,31 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Do
       continue;
 
     // fill local variables for this position --> one measurement
-    FillDetElemData(cluster);
+    
+    // FillDetElemData(cluster); // function to get the transformation matrix
+    
     FillRecPointData(cluster);
     FillTrackParamData(&*itTrackParam);
 
     // 'inverse' (GlobalToLocal) rotation matrix
-    const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
-
+    // const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
+    
+    auto trans = transformation(cluster->getDEId());
+    // LOG(info) << Form("cluster ID: %i", cluster->getDEId());
+    TMatrixD transMat(3,4);
+    trans.GetTransformMatrix(transMat);
+    // transMat.Print();
+    Double_t r[9];
+    r[0] = transMat(0,0);
+    r[1] = transMat(0,1);
+    r[2] = transMat(0,2);
+    r[3] = transMat(1,0);
+    r[4] = transMat(1,1);
+    r[5] = transMat(1,2);
+    r[6] = transMat(2,0);
+    r[7] = transMat(2,1);
+    r[8] = transMat(2,2);
+    
     // calculate measurements
     if (fBFieldOn) {
 
@@ -410,8 +438,8 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Do
     }
 
     // Set local equations
-    LocalEquationX();
-    LocalEquationY();
+    LocalEquationX(r);
+    LocalEquationY(r);
   }
 
   // copy track record
@@ -422,7 +450,7 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, Bool_t doAlignment, Do
   // save record data
   if (doAlignment) {
     fMillepede->SaveRecordData();
-    fMillepede->CloseDataRecStorage();
+    //fMillepede->CloseDataRecStorage();
   }
 
   // return record
@@ -439,8 +467,8 @@ void Alignment::ProcessTrack(AliMillePedeRecord* trackRecord)
     return;
 
   // // make sure record storage is initialized
-  if (!fMillepede->GetRecord()) {
-    fMillepede->InitDataRecStorage(kFalse);
+  if (!fMillepede->GetRecord()){
+    fMillepede->InitDataRecStorage(kFALSE);
   }
   // // copy content
   *fMillepede->GetRecord() = *trackRecord;
@@ -899,17 +927,17 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
   LOG(info) << "Used " << lNDetElem << " DetElem, MeanZ= " << lMeanZ << ", SigmaZ= " << lSigmaZ;
 
   // create all possible arrays
-  Array fConstraintX[4];  // Array for constraint equation X
-  Array fConstraintY[4];  // Array for constraint equation Y
-  Array fConstraintP[4];  // Array for constraint equation P
-  Array fConstraintXZ[4]; // Array for constraint equation X vs Z
-  Array fConstraintYZ[4]; // Array for constraint equation Y vs Z
-  Array fConstraintPZ[4]; // Array for constraint equation P vs Z
+  Array fConstraintX[4];  //Array for constraint equation X
+  Array fConstraintY[4];  //Array for constraint equation Y
+  Array fConstraintP[4];  //Array for constraint equation P
+  Array fConstraintXZ[4]; //Array for constraint equation X vs Z
+  Array fConstraintYZ[4]; //Array for constraint equation Y vs Z
+  Array fConstraintPZ[4]; //Array for constraint equation P vs Z
 
   // do we really need these ?
-  Array fConstraintXY[4]; // Array for constraint equation X vs Y
-  Array fConstraintYY[4]; // Array for constraint equation Y vs Y
-  Array fConstraintPY[4]; // Array for constraint equation P vs Y
+  Array fConstraintXY[4]; //Array for constraint equation X vs Y
+  Array fConstraintYY[4]; //Array for constraint equation Y vs Y
+  Array fConstraintPY[4]; //Array for constraint equation P vs Y
 
   // fill Bool_t sides array based on masks, for convenience
   Bool_t lDetTLBR[4];
@@ -939,7 +967,7 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
     auto fTransform = fTransformCreator(lDetElemId);
     o2::math_utils::Point3D<double> SlatPos{0.0, 0.0, 0.0};
     o2::math_utils::Point3D<double> GlobalPos;
-
+    
     fTransform.LocalToMaster(SlatPos, GlobalPos);
     lDetElemGloX = GlobalPos.x();
     lDetElemGloY = GlobalPos.y();
@@ -1100,7 +1128,6 @@ void Alignment::SetSigmaXY(Double_t sigmaX, Double_t sigmaY)
 //_____________________________________________________
 void Alignment::GlobalFit(Double_t* parameters, Double_t* errors, Double_t* pulls)
 {
-
   /// Call global fit; Global parameters are stored in parameters
   fMillepede->GlobalFit(parameters, errors, pulls);
 
@@ -1340,11 +1367,11 @@ void Alignment::SetAlignmentResolution(const TClonesArray* misAlignArray, Int_t 
             (volName.Length() == volName.Index(chName2) + chName2.Length())))) {
 
         volName.Remove(0, volName.Last('/') + 1);
-        // if (volName.Contains("GM")){
-        //   alignMat->SetCorrMatrix(mChCorrMatrix);
-        // }else if (volName.Contains("DE")){
-        //   alignMat->SetCorrMatrix(mDECorrMatrix);
-        // }
+        //if (volName.Contains("GM")){
+        //  alignMat->SetCorrMatrix(mChCorrMatrix);
+        //}else if (volName.Contains("DE")){
+        //  alignMat->SetCorrMatrix(mDECorrMatrix);
+        //}
       }
     }
   }
@@ -1425,14 +1452,14 @@ LocalTrackParam Alignment::RefitStraightTrack(Track& track, Double_t z0) const
 //_____________________________________________________
 void Alignment::FillDetElemData(const Cluster* cluster)
 {
-  // LOG(fatal) << __PRETTY_FUNCTION__ << " is disabled";
-  LOG(info) << __PRETTY_FUNCTION__ << " is enabled";
+  LOG(fatal) << __PRETTY_FUNCTION__ << " is disabled";
+  // LOG(info) << __PRETTY_FUNCTION__ << " is enabled";
 
   /// Get information of current detection element
   // get detector element number from Alice ID
   const Int_t detElemId = cluster->getDEId();
   fDetElemNumber = GetDetElemNumber(detElemId);
-
+  cout << "Detector element ID: " << detElemId << "   Detector element number: " << fDetElemNumber <<endl;
   // get detector element
   // const AliMUONGeometryDetElement detElement(detElemId);
   auto fTransform = fTransformCreator(detElemId);
@@ -1442,6 +1469,7 @@ void Alignment::FillDetElemData(const Cluster* cluster)
   */
   // fTransform = fTransform.Inverse();
   // fTransform.GetTransformMatrix(fGeoCombiTransInverse);
+  cout << "done with FillDetElemData" <<endl;
 }
 
 //______________________________________________________________________
@@ -1467,12 +1495,12 @@ void Alignment::FillTrackParamData(const TrackParam* trackParam)
 }
 
 //______________________________________________________________________
-void Alignment::LocalEquationX(void)
+void Alignment::LocalEquationX(const Double_t* r)
 {
   /// local equation along X
 
   // 'inverse' (GlobalToLocal) rotation matrix
-  const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
+  // const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
 
   // local derivatives
   SetLocalDerivative(0, r[0]);
@@ -1518,12 +1546,12 @@ void Alignment::LocalEquationX(void)
 }
 
 //______________________________________________________________________
-void Alignment::LocalEquationY(void)
+void Alignment::LocalEquationY(const Double_t* r)
 {
   /// local equation along Y
 
   // 'inverse' (GlobalToLocal) rotation matrix
-  const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
+  // const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
 
   // store local derivatives
   SetLocalDerivative(0, r[3]);

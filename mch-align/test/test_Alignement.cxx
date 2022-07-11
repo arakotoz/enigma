@@ -8,6 +8,7 @@
 
 // #include <TSystem.h>
 #include <TFile.h>
+#include <TSystem.h>
 #include <TTree.h>
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
@@ -16,6 +17,7 @@
 #include <TH2F.h>
 #include <TCanvas.h>
 #include <TLegend.h>
+#include <TMatrixD.h>
 #include <TParameter.h>
 #include <TDatabasePDG.h>
 #include <Math/Vector4D.h>
@@ -54,7 +56,7 @@
 using namespace o2;
 
 
-const std::string_view prefix{"./simul_results/MCH_100events_fmu"}; // prefix of simulation directory
+// const std::string_view prefix{"./simul_results/MCH_100events_fmu"}; // prefix of simulation directory
 /*
 const uint32_t nOrbitsPerTF = 128;
 =======
@@ -165,8 +167,8 @@ void test_Alignement(int runNumber, std::string mchFileName, bool applyTrackSele
 mch::Track* MCHFormatConvert(mch::TrackMCH& track, const std::vector<mch::Cluster>& clusters);
 
 //_________________________________________________________________________________________________
-void test_Alignement(std::string mchFileName, bool doAlign, Double_t weightRecord, bool applyTrackSelection = false,
-  bool selectSignal = false, bool rejectBackground = false, std::string outFileName = "")
+void test_Alignement(std::string prefix, std::string mchFileName, std::string recDataFileName, std::string recConsFileName, std::string outFileName = "Alignment_data.root", bool doAlign = true, Double_t weightRecord = 1, bool applyTrackSelection = false,
+  bool selectSignal = false, bool rejectBackground = false)
 {
   /// show the characteristics of the reconstructed tracks
   /// store the ouput histograms in outFileName if any
@@ -210,7 +212,8 @@ void test_Alignement(std::string mchFileName, bool doAlign, Double_t weightRecor
 
   // input file: MCH -> mchtracks.root
   cout << "Reading tracks..." <<endl;
-  auto [fMCH, mchReader] = LoadData(mchFileName.c_str(), "o2sim");
+  std::string DataFile = Form("%s/%s", prefix.c_str(), mchFileName.c_str());
+  auto [fMCH, mchReader] = LoadData(DataFile.c_str(), "o2sim");
 
 
   // tree entry do not correspond to tracks, there is only one single entry; all tracks and other data type
@@ -218,13 +221,8 @@ void test_Alignement(std::string mchFileName, bool doAlign, Double_t weightRecor
   TTreeReaderValue<std::vector<mch::ROFRecord>> mchROFs = {*mchReader, "trackrofs"};
   TTreeReaderValue<std::vector<mch::TrackMCH>> mchTracks = {*mchReader, "tracks"};
   TTreeReaderValue<std::vector<mch::Cluster>> mchClusters = {*mchReader, "trackclusters"};
-  TTreeReaderValue<std::vector<MCCompLabel>> mchLabels = {*mchReader, "tracklabels"};
+  TTreeReaderValue<std::vector<MCCompLabel>> mchLabels = {*mchReader, "tracklabels"}; // for simulation test
   // TTreeReaderValue<std::vector<mch::Digit>> mchDigits = {*mchReader, "trackdigits"};
-
-  //TTreeReaderValue<mch::ROFRecord> mchROFs(mchReader, "trackrofs");
-  //TTreeReaderValue<mch::TrackMCH> mchTracks(mchReader, "tracks");
-  //TTreeReaderValue<mch::Cluster> mchClusters(mchReader, "trackclusters");
-  //TTreeReaderValue<mch::Digit> mchDigits(mchReader, "trackdigits");
 
 
   // cout << mchReader->GetEntries() << " entries loaded" <<endl;
@@ -241,27 +239,53 @@ void test_Alignement(std::string mchFileName, bool doAlign, Double_t weightRecor
   */
 
   // open output file if any
-  TFile* fOut = nullptr;
-  if (!outFileName.empty()) {
-    fOut = TFile::Open(outFileName.c_str(), "RECREATE");
-  }
+  std::string Path_file = Form("./Records/%s", outFileName.c_str());
+  TFile* fOut = TFile::Open(Path_file.c_str(), "RECREATE");
 
   // initialize aligner
-  test_align->init();
+  test_align->init(recDataFileName, recConsFileName);
+
+  // load initial global parameters and constraints for Millepede
+  // Maybe there will be some initial parameters?
+  /*
+    // read initial params and constraints from CCDB?
+
+    test_align->InitGlobalParameters(Double_t* par);
+  */
+
+  // config for detector constraints:
+  /*
+
+  */
+
+  // create root file for saving results of alignment process(GlobalFit)
+  // 3 branchs: params, errors, pulls
+
+  int NGlobalPar = test_align->fNGlobal;
+  double params[NGlobalPar];
+  double errors[NGlobalPar];
+  double pulls[NGlobalPar];
+
+  TTree *TreeOut = new TTree("Alignment_records", "Alignment_records");
+  TreeOut->Branch("NGlobalPar", &NGlobalPar, "NGlobalPar/I");
+  TreeOut->Branch("params", params, "params[NGlobalPar]/D");
+  TreeOut->Branch("errors", errors, "errors[NGlobalPar]/D");
+  TreeOut->Branch("pulls", pulls, "pulls[NGlobalPar]/D");
 
 
-  cout << "Start processing" <<endl;
+  cout << "Start processing..." <<endl;
   // processing for each track
-
   while(mchReader->Next()){
 
     // loop for all tracks
     int nb_tracks = mchTracks->size();
     for(int id_track = 0; id_track < nb_tracks; ++ id_track){
       // Data format converision: O2 convention to MCH internal convention:
-      // TrackMCh -> Track
+      // TrackMCH -> Track
       auto mchTrack = mchTracks->at(id_track);
       int nb_clusters = mchTrack.getNClusters();
+      cout << "=======================================================================" <<endl;
+      cout << "Start processing for track: " << id_track <<endl;
       cout << "=======================================================================" <<endl;
 
       cout << nb_clusters << " clusters attached for track " << id_track <<endl;
@@ -271,10 +295,11 @@ void test_Alignement(std::string mchFileName, bool doAlign, Double_t weightRecor
       auto mchLabel = mchLabels->at(id_track);
       cout << "Current track is valid? " << mchLabel.isValid() <<endl;
       cout << "Cureent track ID: " << mchLabel.getTrackID() << " for event: " << mchLabel.getEventID() <<endl;
+      
       if(!mchLabel.isValid()){
         // skip non valid tracks
         continue;
-      }
+      } // for simulation test
 
 
       // Check if current track is connected with other track
@@ -286,39 +311,171 @@ void test_Alignement(std::string mchFileName, bool doAlign, Double_t weightRecor
 
       // Data format conversion
     
-      auto alignTrack = MCHFormatConvert(mchTrack, *mchClusters);
-      
-      cout << endl;
-      cout << endl;
-      cout << endl;
-      cout << endl;
+      // mch::Track* alignTrack = MCHFormatConvert(mchTrack, *mchClusters);
 
-      // Track processing and data storage
-      AliMillePedeRecord* mchRecord = test_align->ProcessTrack(*alignTrack, doAlign, weightRecord);
-      test_align->ProcessTrack(mchRecord);
+      /// Format conversion from TrackMCH to Track(MCH internal use)
+      cout << "Start track format conversion..." <<endl; 
+      mch::Track convertedTrack = mch::Track();
+      // int CurrentChamber = alignTrack->getCurrentChamber();
+
+      // Create a reference track param
+      /*
+      TMatrixD Param0{5, 1};
+      Param0.SetMatrixArray(mchTrack.getParameters());
+      Param0.Print();
+      */
+      auto Param0 = mchTrack.getParameters();
+      double Z0 = mchTrack.getZ();
+      mch::TrackParam extrapParam = mch::TrackParam(Z0, Param0);
+      //mch::TrackParam* extrapParam = new mch::TrackParam();
+
+      // Get clusters for current track
+      int id_cluster_first = mchTrack.getFirstClusterIdx();
+      int id_cluster_last = mchTrack.getLastClusterIdx();
+      cout << "Current track's cluster starts at index: " << id_cluster_first << " stops at: " << id_cluster_last << endl;
+      cout << "old param => x slope: " << Param0[1] << " y slope: " << Param0[3] <<endl;
+      for(int id_cluster = id_cluster_first; id_cluster < id_cluster_last + 1 ; ++id_cluster){
+        
+        cout << "-----------------------------------------------------------------------" <<endl;
+
+        // mch::TrackParam* extrapParam = new mch::TrackParam(Z0, Param0);
+
+        /*
+        extrapParam->setZ(Z0);
+        extrapParam->setParameters(Param0);
+        extrapParam->print();
+        */
+
+        mch::Cluster* cluster = &(mchClusters->at(id_cluster));
+        const double Z_cluster = cluster->getZ();
+        const int DEId_cluster = cluster->getDEId();
+        const int CId_cluster = cluster->getChamberId();
+        const int ind_cluster = cluster->getClusterIndex();
+        cout << "Cluster: " << id_cluster << " at Z = " << Z_cluster <<endl;
+        cout << "Cluster ID  " << "DET: " << DEId_cluster << " Chamber: " << CId_cluster << " Index: " << ind_cluster<<endl;
+        
+        // cout << "-----------------------------------------------------------------------" <<endl;
+        // Perform extrapolation to get all track parameters
+        /*
+          will there be some extra bias added while processing extrapolation ?
+        */
+        if(mch::TrackExtrap::extrapToZ(extrapParam, Z_cluster)){
+          LOG(info) << Form("Extrapolation succes to cluster: %i", id_cluster);
+        }else{
+          LOG(fatal) << Form("Extrapolation failed to cluster: %i", id_cluster);
+        }
+
+        cout << "new param => x slope: " << extrapParam.getNonBendingSlope() << " y slope: " << extrapParam.getBendingSlope() <<endl;
+        cout << "-----------------------------------------------------------------------" <<endl;
+        
+        // Link current cluster to the extrapolated track param
+        extrapParam.setClusterPtr(cluster);
+
+        // Add current param to track
+        convertedTrack.setCurrentParam(extrapParam, CId_cluster);
+        convertedTrack.addParamAtCluster(extrapParam);
+        /*
+        auto itParam = convertedTrack.begin();
+        for(;itParam!=convertedTrack.end();++itParam){
+          const mch::Cluster* itCluster = itParam->getClusterPtr();
+          LOG(info) << Form("cluster ID: %i    chamber ID: %i", itCluster->getDEId(), itCluster->getChamberId());
+          // LOG(info) << Form("Z : %f", itParam->getZ());
+          // cout << &itParam <<endl;
+        }
+        */
+      }
+
+      cout << convertedTrack.getNClusters() << " clusters' param are converted into MCH track format." <<endl;
+      cout << "-----------------------------------------------------------------------" <<endl;
+      cout << "Track format conversion done."<<endl;
+
+
+      // cout << alignTrack->getNClusters() <<" clusters for current track"<< endl;
+      // auto param_ptr = convertedTrack->begin();
+      // const mch::Cluster* cluster = param_ptr->getClusterPtr();
+      // cout << "first cluster detector ID: " << cluster->getDEId() <<endl;
+      // no problem with alignTrack
+
+      AliMillePedeRecord* mchRecord = test_align->ProcessTrack(convertedTrack, transformation, doAlign, weightRecord);
+      
+      cout << "=======================================================================" <<endl;
+      cout << "Processing done for track: " << id_track <<endl;
+      cout << "=======================================================================" <<endl;
+      // test_align->ProcessTrack(mchRecord);
+
+      cout << endl;
+      cout << endl;
+      cout << endl;
 
     }
-    // cout << mchClusters->size() << " clusters" <<endl;
+
+    // Data storage finished(fMillepede.fTreeData) with all tracks:
+    /*
+      track records are stored in test_algin.fMillepede.fTreeData (with branch fRecord and same indexing with tracks)
+      and can be read using ReadRecordData(Long_t recID)
+    */
+    
+    cout << "Start alignment process..." <<endl;
+    // Process alignment:
+    cout << "=======================================================================" <<endl;
+    cout << "Start global fitting..."<<endl;
+    cout << "=======================================================================" <<endl;
+    // Process global fit for each track:
+    test_align->GlobalFit(params, errors, pulls);
+    // Fill output tree:
+    TreeOut->Fill();
+    cout << "=======================================================================" <<endl;
+    cout << "Global fitting done."<<endl;
+    cout << "=======================================================================" <<endl;
+    
+    
 
   }
+  
+  // TreeOut->Print();
+  // Close files and store all tracks' records
+  test_align->terminate();
+  LOG(info)<<"Alignment finished";
+  
+  if(TreeOut){
+    if(fOut->IsWritable()){
+      fOut->cd();
+      TreeOut->Write();
+      TreeOut->Delete();
+      if(fOut){
+        fOut->Close();
+        fOut->Delete();
+        LOG(info) << "Data storage done." <<endl;
+      }
+    }
 
-  cout << "Test done!" <<endl;
+  }else{
+    LOG(fatal) << "Output tree is empty." <<endl;
+  }
 
+  LOG(info)<<"Test done!";
+  /*
+  auto t = transformation(1025);
+  TMatrixD mat(3,4);
+  t.GetTransformMatrix(mat);
+  cout << mat(0,0) <<endl;
+  */
 
 }
 
 //_________________________________________________________________________________________________
 mch::Track* MCHFormatConvert(mch::TrackMCH& track, const std::vector<mch::Cluster>& clusters)
 {
+
   /// Format conversion from TrackMCH to Track(MCH internal use)
-  
-  auto convertedTrack = new mch::Track();
+  cout << "Start track format conversion..." <<endl; 
+  static mch::Track* convertedTrack = new mch::Track();
   // int CurrentChamber = alignTrack->getCurrentChamber();
 
   // Create a reference track param
   auto Param0 = track.getParameters();
   double Z0 = track.getZ();
-  auto extrapParam = new mch::TrackParam(Z0, Param0);
+  static mch::TrackParam* extrapParam = new mch::TrackParam(Z0, Param0);
 
 
   // Get clusters for current track
@@ -335,7 +492,7 @@ mch::Track* MCHFormatConvert(mch::TrackMCH& track, const std::vector<mch::Cluste
     int CId_cluster = cluster.getChamberId();
     int ind_cluster = cluster.getClusterIndex();
     cout << "Cluster: " << id_cluster << " at Z = " << Z_cluster <<endl;
-    cout << "Cluster ID " << "DET: " << DEId_cluster << " Chamber: " << CId_cluster << " Index: " << ind_cluster<<endl;
+    cout << "Cluster ID  " << "DET: " << DEId_cluster << " Chamber: " << CId_cluster << " Index: " << ind_cluster<<endl;
     
     // cout << "-----------------------------------------------------------------------" <<endl;
     // Perform extrapolation to get all track parameters
@@ -358,7 +515,7 @@ mch::Track* MCHFormatConvert(mch::TrackMCH& track, const std::vector<mch::Cluste
 
   cout << convertedTrack->getNClusters() << " clusters' param are converted into MCH track format." <<endl;
   cout << "-----------------------------------------------------------------------" <<endl;
-
+  cout << "Track format conversion done."<<endl;
   return convertedTrack;
   
 

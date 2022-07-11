@@ -59,7 +59,7 @@ class LocalTrackParam
   double fTrackZ = 0.0;
   double fTrackSlopeX = 0.0;
   double fTrackSlopeY = 0.0;
-}; // class LocalTrackParam
+}; //class LocalTrackParam
 
 class Alignment : public TObject
 {
@@ -70,7 +70,7 @@ class Alignment : public TObject
   ~Alignment() = default;
 
   // initialize
-  void init(void);
+  void init(std::string DataRecFName, std::string ConsRecFName);
 
   // terminate
   void terminate(void);
@@ -144,7 +144,7 @@ class Alignment : public TObject
     AllSides = SideTop | SideBottom | SideLeft | SideRight
   };
 
-  AliMillePedeRecord* ProcessTrack(Track& track, Bool_t doAlignment, Double_t weight = 1);
+  AliMillePedeRecord* ProcessTrack(Track& track, const o2::mch::geo::TransformationCreator& transformation, Bool_t doAlignment, Double_t weight = 1);
 
   void ProcessTrack(AliMillePedeRecord*);
 
@@ -180,10 +180,10 @@ class Alignment : public TObject
   void SetSigmaXY(Double_t sigmaX, Double_t sigmaY);
 
   /// Set geometry transformer
-  // void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
+  //void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
   //{
-  //    fTransform = transformer;
-  // }
+  //   fTransform = transformer;
+  //}
 
   //@}
 
@@ -305,9 +305,9 @@ class Alignment : public TObject
 
   void FillTrackParamData(const TrackParam*);
 
-  void LocalEquationX(void);
+  void LocalEquationX(const Double_t* r);
 
-  void LocalEquationY(void);
+  void LocalEquationY(const Double_t* r);
 
   TGeoCombiTrans DeltaTransform(const double* detElemMisAlignment) const;
 
@@ -411,7 +411,7 @@ class Alignment : public TObject
   /// Geometry transformation
   // AliMUONGeometryTransformer* fTransform;
   o2::mch::geo::TransformationCreator fTransformCreator;
-  TGeoCombiTrans fGeoCombiTransInverse;
+  //TGeoCombiTrans fGeoCombiTransInverse;
 
   /// preform evaluation
   Bool_t fDoEvaluation;
@@ -426,8 +426,8 @@ class Alignment : public TObject
   /// output TTree
   TTree* fTTree;
 
-}; // class Alignment
+}; //class Alignment
 
-} // namespace mch
-} // namespace o2
+} //namespace mch
+} //namespace o2
 #endif // ALICEO2_MCH_ALIGNMENT_H_
