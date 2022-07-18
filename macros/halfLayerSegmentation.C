@@ -1642,6 +1642,7 @@ void printSensorID()
   for (Int_t iChip = 0; iChip < NChips; iChip++) {
     Int_t hf = 0, dk = 0, lr = 0, sr = 0;
     gman->getSensorID(iChip, hf, dk, lr, sr);
+    sname = gman->composeSymNameChip(hf, dk, lr, sr);
     Int_t uid = o2::base::GeometryManager::getSensID(o2::detectors::DetID::MFT, iChip);
     o2::itsmft::MFTChipMappingData chipMapping = (mMFTChipMapper.getChipMappingData())[iChip];
     std::cout << "h " << hf << " " << (UShort_t)chipMapping.half
@@ -1652,7 +1653,7 @@ void printSensorID()
               << " sr " << std::setw(2) << sr << " " << std::setw(2) << (UShort_t)chipMapping.chipOnModule
               << " iChip " << std::setw(4) << iChip << " tr " << std::setw(2) << (UShort_t)chipMapping.cable
               << " uid " << uid
-              //              << " " << sname
+              << " " << sname
               << std::endl;
   }
 }
