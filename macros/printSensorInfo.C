@@ -29,6 +29,7 @@ void printSensorInfo(
   const bool wSymName = true,
   const bool wTranslation = true,
   const bool wRotation = true,
+  const bool wDeg = true,
   const bool preferAlignedFile = true)
 {
   // geometry
@@ -50,6 +51,6 @@ void printSensorInfo(
   }
   for (Int_t iChip = 0; iChip < NChips; iChip++) {
     SensorInfo chipInfo(iChip, geom);
-    chipInfo.print(wSymName, wTranslation, wRotation);
+    chipInfo.print(wSymName, wTranslation, wRotation, wDeg);
   }
 }

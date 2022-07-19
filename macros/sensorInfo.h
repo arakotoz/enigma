@@ -32,7 +32,8 @@ class SensorInfo
   /// \brief print sensor info to screen
   void print(bool wSymName = true,
              bool wTranslation = true,
-             bool wRotation = true);
+             bool wRotation = true,
+             bool wDeg = true);
 
  protected:
   Int_t mChipIndexOnLadder = 0;                     ///< sensor index within the ladder [0, 4]
@@ -76,6 +77,7 @@ SensorInfo::SensorInfo(const int chipIndex, const o2::mft::GeometryTGeo* geom)
   setSensor(chipIndex);
   setSensorUid(chipIndex);
   setSymName();
+  setSensorTransform();
 }
 
 //__________________________________________________________________________
@@ -150,6 +152,20 @@ void SensorInfo::setSymName()
 void SensorInfo::setSensorTransform()
 {
   if (mGeometry) {
+    /*
+    o2::math_utils::Transform3D matrix = mGeometry->getMatrixL2G(mChipIndexInMft);
+    double rot[9], tra[3];
+    matrix.GetComponents(rot[0], rot[1], rot[2], tra[0], rot[3], rot[4], rot[5], tra[1], rot[6], rot[7], rot[8], tra[2]);
+    mTransform.SetRotation(rot);
+    mTransform.SetTranslation(tra);
+    std::cout << std::scientific << std::setprecision(2)
+              << " tra " << tra[0] << " " << tra[1] << " " << tra[2];
+    std::cout << std::scientific << std::setprecision(2)
+              << " rot "
+              << rot[0] << " " << rot[1] << " " << rot[2] << " "
+              << rot[3] << " " << rot[4] << " " << rot[5] << " "
+              << rot[6] << " " << rot[7] << " " << rot[8] << std::endl;
+    */
     mTransform = mGeometry->getMatrixL2G(mChipIndexInMft);
   } else {
     LOG(error) << "SensorInfo::setSensorTransform() - nullptr to geometry"
@@ -160,7 +176,8 @@ void SensorInfo::setSensorTransform()
 //__________________________________________________________________________
 void SensorInfo::print(bool wSymName,
                        bool wTranslation,
-                       bool wRotation)
+                       bool wRotation,
+                       bool wDeg)
 {
   if (mGeometry == nullptr) {
     wSymName = false;
@@ -186,11 +203,17 @@ void SensorInfo::print(bool wSymName,
   if (wRotation) {
     constexpr double rad2deg = 180.0 / 3.14159265358979323846;
     Double_t* rot = mTransform.GetRotationMatrix();
-    double roll = rad2deg * std::atan2(-rot[5], rot[8]);
-    double pitch = rad2deg * std::asin(rot[2]);
-    double yaw = rad2deg * std::atan2(-rot[1], rot[0]);
+    double rotX = std::atan2(-rot[5], rot[8]);
+    double rotY = std::asin(rot[2]);
+    double rotZ = std::atan2(-rot[1], rot[0]);
+    if (wDeg) {
+      rotX *= rad2deg;
+      rotY *= rad2deg;
+      rotZ *= rad2deg;
+      std::cout << " (deg)";
+    }
     std::cout << std::scientific << std::setprecision(2)
-              << " roll " << roll << " pitch " << pitch << " yaw " << yaw;
+              << " Rx " << rotX << " Ry " << rotY << " Rz " << rotZ;
   }
   std::cout << std::setprecision(ss) << std::endl;
 }
