@@ -61,10 +61,10 @@ class AlignHelper
   void setResidualCutInitial(const Double_t value) { mResCutInitial = value; }
   void setResidualCut(const Double_t value) { mResCut = value; }
   void setMinNumberClusterCut(const int value) { mMinNumberClusterCut = value; }
-  void setAllowedVariationDeltaX(const int value) { mAllowVar[0] = value; }
-  void setAllowedVariationDeltaY(const int value) { mAllowVar[1] = value; }
-  void setAllowedVariationDeltaZ(const int value) { mAllowVar[3] = value; }
-  void setAllowedVariationDeltaRz(const int value) { mAllowVar[2] = value; }
+  void setAllowedVariationDeltaX(const double value) { mAllowVar[0] = value; }
+  void setAllowedVariationDeltaY(const double value) { mAllowVar[1] = value; }
+  void setAllowedVariationDeltaZ(const double value) { mAllowVar[3] = value; }
+  void setAllowedVariationDeltaRz(const double value) { mAllowVar[2] = value; }
 
   /// \brief set pointer to geometry prepared outside of the class i.e. already had fillMatrixCache()
   void setGeometry(const o2::mft::GeometryTGeo* geom) { mGeometry = geom; }
@@ -216,9 +216,16 @@ void AlignHelper::init()
     mMillepede->InitDataRecStorage(kFALSE);
   }
 
+  LOG(info) << "-------------- Alignment configured with -----------------";
+  LOGF(info, "Chi2CutNStdDev = %d", mChi2CutNStdDev);
+  LOGF(info, "ResidualCutInitial = %.3f", mResCutInitial);
+  LOGF(info, "ResidualCut = %.3f", mResCut);
+  LOGF(info, "MinNumberClusterCut = %d", mMinNumberClusterCut);
+  LOGF(info, "mStartFac = %.3f", mStartFac);
   LOGF(info,
-       "Allowed variation: dx %.3f, dy %.3f, dz %.3f, dRz %.4f",
+       "Allowed variation: dx = %.3f, dy = %.3f, dz = %.3f, dRz = %.4f",
        mAllowVar[0], mAllowVar[1], mAllowVar[3], mAllowVar[2]);
+  LOG(info) << "-----------------------------------------------------------";
 
   // set allowed variations for all parameters
   for (int chipId = 0; chipId < mNumberOfSensors; ++chipId) {
@@ -533,14 +540,23 @@ bool AlignHelper::setLocalEquationX()
   success &= setGlobalDerivative(chipId + mNDofPerSensor + 2, mAlignPoint->globalDerivativeX().dDeltaRz());
   success &= setGlobalDerivative(chipId + mNDofPerSensor + 3, mAlignPoint->globalDerivativeX().dDeltaZ());
 
-  if (success)
+  if (success) {
+    if (mCounterUsedTracks < 5)
+      LOGF(info,
+           "setLocalEquationX(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e X %.3e",
+           mCounterUsedTracks,
+           mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
+           mGlobalDerivatives[0], mGlobalDerivatives[1], mGlobalDerivatives[2], mGlobalDerivatives[3],
+           mAlignPoint->getLocalMeasuredPosition().X());
+
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
       mAlignPoint->getLocalMeasuredPosition().X(),
       mAlignPoint->getMeasuredPositionSigma().X());
-  else
+  } else {
     mCounterLocalEquationFailed++;
+  }
 
   return success;
 }
@@ -579,14 +595,23 @@ bool AlignHelper::setLocalEquationY()
   success &= setGlobalDerivative(chipId + mNDofPerSensor + 2, mAlignPoint->globalDerivativeY().dDeltaRz());
   success &= setGlobalDerivative(chipId + mNDofPerSensor + 3, mAlignPoint->globalDerivativeY().dDeltaZ());
 
-  if (success)
+  if (success) {
+    if (mCounterUsedTracks < 5)
+      LOGF(info,
+           "setLocalEquationY(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Y %.3e",
+           mCounterUsedTracks,
+           mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
+           mGlobalDerivatives[0], mGlobalDerivatives[1], mGlobalDerivatives[2], mGlobalDerivatives[3],
+           mAlignPoint->getLocalMeasuredPosition().Y());
+
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
       mAlignPoint->getLocalMeasuredPosition().Y(),
       mAlignPoint->getMeasuredPositionSigma().Y());
-  else
+  } else {
     mCounterLocalEquationFailed++;
+  }
 
   return success;
 }
@@ -626,14 +651,22 @@ bool AlignHelper::setLocalEquationZ()
   success &= setGlobalDerivative(chipId + mNDofPerSensor + 2, mAlignPoint->globalDerivativeZ().dDeltaRz());
   success &= setGlobalDerivative(chipId + mNDofPerSensor + 3, mAlignPoint->globalDerivativeZ().dDeltaZ());
 
-  if (success)
+  if (success) {
+    if (mCounterUsedTracks < 5)
+      LOGF(info,
+           "setLocalEquationZ(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e",
+           mCounterUsedTracks,
+           mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
+           mGlobalDerivatives[0], mGlobalDerivatives[1], mGlobalDerivatives[2], mGlobalDerivatives[3],
+           mAlignPoint->getLocalMeasuredPosition().Y());
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
       mAlignPoint->getLocalMeasuredPosition().Z(),
       mAlignPoint->getMeasuredPositionSigma().Z());
-  else
+  } else {
     mCounterLocalEquationFailed++;
+  }
 
   return success;
 }

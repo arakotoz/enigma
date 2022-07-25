@@ -86,8 +86,12 @@ void runAlign(const Int_t fileStop = 4315,
 
   AlignHelper aligner;
 
-  AlignHelper::AlignConfig alignConfigParam;
+  aligner.setGeometry(geom);
+  aligner.setClusterDictionary(&dict);
+
   aligner.setSaveTrackRecordToFile(saveTrackRecordToFile);
+
+  AlignHelper::AlignConfig alignConfigParam;
   aligner.setChi2CutNStdDev(alignConfigParam.chi2CutNStdDev);
   aligner.setResidualCutInitial(alignConfigParam.residualCutInitial);
   aligner.setResidualCut(alignConfigParam.residualCut);
@@ -96,11 +100,6 @@ void runAlign(const Int_t fileStop = 4315,
   aligner.setAllowedVariationDeltaZ(alignConfigParam.allowedVarDeltaZ);
   aligner.setAllowedVariationDeltaRz(alignConfigParam.allowedVarDeltaRz);
   aligner.setMinNumberClusterCut(alignConfigParam.minPoints);
-
-  // set geometry and dictionary
-
-  aligner.setGeometry(geom);
-  aligner.setClusterDictionary(&dict);
 
   // TODO: fix det. elements here
 
