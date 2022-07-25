@@ -7,6 +7,7 @@
 #include <TFile.h>
 #include <TTree.h>
 #include <Rtypes.h>
+#include <ROOT/RDataFrame.hxx>
 
 #include "CommonDataFormat/InteractionRecord.h"
 #include "DataFormatsITSMFT/CompCluster.h"
@@ -16,6 +17,7 @@
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
+#include "DetectorsCommonDataFormats/AlignParam.h"
 
 #include "alignHelper.h"
 
@@ -82,9 +84,9 @@ void runAlign(const Int_t fileStop = 4315,
 
   // instantiate and configure the aligner
 
-  AlignHelper aligner();
+  AlignHelper aligner;
 
-  auto& alignConfigParam = o2::mft::AlignConfig::Instance();
+  AlignHelper::AlignConfig alignConfigParam;
   aligner.setSaveTrackRecordToFile(saveTrackRecordToFile);
   aligner.setChi2CutNStdDev(alignConfigParam.chi2CutNStdDev);
   aligner.setResidualCutInitial(alignConfigParam.residualCutInitial);
@@ -93,12 +95,12 @@ void runAlign(const Int_t fileStop = 4315,
   aligner.setAllowedVariationDeltaY(alignConfigParam.allowedVarDeltaY);
   aligner.setAllowedVariationDeltaZ(alignConfigParam.allowedVarDeltaZ);
   aligner.setAllowedVariationDeltaRz(alignConfigParam.allowedVarDeltaRz);
-  aligner.setMinNumberClusterCut(alignConfigParam.minPoints[o2::mft::AlignConfig::Collision]);
+  aligner.setMinNumberClusterCut(alignConfigParam.minPoints);
 
   // set geometry and dictionary
 
   aligner.setGeometry(geom);
-  aligner.setClusterDictionary(*dict);
+  aligner.setClusterDictionary(&dict);
 
   // TODO: fix det. elements here
 
@@ -107,7 +109,9 @@ void runAlign(const Int_t fileStop = 4315,
 
   // compute Mille records
 
-  int nRof = aligner.connectToTChains(mfttrackChain, mftclusterChain);
+  TChain* mfttrackChainP = &mfttrackChain;
+  TChain* mftclusterChainP = &mftclusterChain;
+  int nRof = aligner.connectToTChains(mfttrackChainP, mftclusterChainP);
   for (int irof = 0; irof < nRof; irof++) { // loop on ROFs
     mftclusterChain.GetEntry(irof);
     mfttrackChain.GetEntry(irof);
@@ -125,7 +129,7 @@ void runAlign(const Int_t fileStop = 4315,
   std::vector<o2::detectors::AlignParam> alignParams;
   aligner.getAlignParams(alignParams);
   LOG(info) << "Storing MFT alignment params in local file mft_alignment.root";
-  TFile afile(Form("%s/mft_alignment.root", , generalPath.c_str()), "recreate", "", 505);
+  TFile afile(Form("%s/mft_alignment.root", generalPath.c_str()), "recreate", "", 505);
   afile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
   afile.Close();
 

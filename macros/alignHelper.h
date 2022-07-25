@@ -14,9 +14,9 @@
 #include "DataFormatsITSMFT/CompCluster.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "ReconstructionDataFormats/BaseCluster.h"
-#include "MFTAlignHelper/MillePedeRecord.h"
-#include "MFTAlignHelper/MillePede2.h"
-#include "MFTAlignHelper/AlignPointHelper.h"
+#include "MFTAlignment/MillePedeRecord.h"
+#include "MFTAlignment/MillePede2.h"
+#include "MFTAlignment/AlignPointHelper.h"
 #include "MFTBase/GeometryTGeo.h"
 
 #include "Framework/Logger.h"
@@ -29,6 +29,18 @@ using namespace o2::mft;
 
 class AlignHelper
 {
+ public:
+  struct AlignConfig {
+    int minPoints = 6;                  ///< mininum number of clusters in a track used for alignment
+    Int_t chi2CutNStdDev = 3;           ///< Number of standard deviations for chi2 cut
+    Double_t residualCutInitial = 100.; ///< Cut on residual on first iteration
+    Double_t residualCut = 100.;        ///< Cut on residual for other iterations
+    Double_t allowedVarDeltaX = 0.5;    ///< allowed max delta in x-translation (cm)
+    Double_t allowedVarDeltaY = 0.5;    ///< allowed max delta in y-translation (cm)
+    Double_t allowedVarDeltaZ = 0.5;    ///< allowed max delta in z-translation (cm)
+    Double_t allowedVarDeltaRz = 0.01;  ///< allowed max delta in rotation around z-axis (rad)
+  };
+
  public:
   /// \brief construtor
   AlignHelper();
@@ -58,7 +70,7 @@ class AlignHelper
   void setGeometry(const o2::mft::GeometryTGeo* geom) { mGeometry = geom; }
 
   /// \brief access mft tracks and clusters in the ROOT files, return total number of ROFs
-  int connectToTChains(TChain mfttrackChain, Tchain mftclusterChain);
+  int connectToTChains(TChain* mfttrackChain, TChain* mftclusterChain);
 
   /// \brief process a given ROF
   void processROF();
@@ -122,7 +134,6 @@ class AlignHelper
   std::vector<o2::itsmft::CompClusterExt> mMFTClusters, *mMFTClustersVecP = &mMFTClusters;
   std::vector<o2::itsmft::ROFRecord> mMFTClustersROF, *mMFTClustersROFVecP = &mMFTClustersROF;
   std::vector<unsigned char> mMFTClusterPatterns, *mMFTClusterPatternsVecP = &mMFTClusterPatterns;
-  std::vector<unsigned char>::iterator pattIt;
   std::vector<o2::BaseCluster<float>> mMFTClustersGlobal;
 
   /// \brief set array of local derivatives
@@ -153,7 +164,8 @@ class AlignHelper
 AlignHelper::AlignHelper()
   : mRunNumber(0),
     mBz(0),
-    mNumberTFs(0),
+    mNumberOfClusterChainROFs(0),
+    mNumberOfTrackChainROFs(0),
     mCounterLocalEquationFailed(0),
     mCounterSkippedTracks(0),
     mCounterUsedTracks(0),
@@ -225,34 +237,59 @@ void AlignHelper::init()
 }
 
 //__________________________________________________________________________
-int AlignHelper::connectToTChains(TChain mfttrackChain, Tchain mftclusterChain)
+int AlignHelper::connectToTChains(TChain* mfttrackChain, TChain* mftclusterChain)
 {
   // get tracks
-  mfttrackChain.SetBranchAddress("MFTTrack", &mMFTTracksVecP);
-  mfttrackChain.SetBranchAddress("MFTTracksROF", &mMFTTracksROFVecP);
-  mfttrackChain.SetBranchAddress("MFTTrackClusIdx", &mMFTTrackClusIdxVecP);
-  mNumberOfTrackChainROFs = mfttrackChain.GetEntries();
+  mfttrackChain->SetBranchAddress("MFTTrack", &mMFTTracksVecP);
+  mfttrackChain->SetBranchAddress("MFTTracksROF", &mMFTTracksROFVecP);
+  mfttrackChain->SetBranchAddress("MFTTrackClusIdx", &mMFTTrackClusIdxVecP);
+  mNumberOfTrackChainROFs = mfttrackChain->GetEntries();
   LOG(info) << "Number of track chain entries = " << mNumberOfTrackChainROFs;
 
   // get clusters
-  mftclusterChain.SetBranchAddress("MFTClusterComp", &mMFTClustersVecP);
-  mftclusterChain.SetBranchAddress("MFTClustersROF", &mMFTClustersROFVecP);
-  mftclusterChain.SetBranchAddress("MFTClusterPatt", &mMFTClusterPatternsVecP);
-  mNumberOfClusterChainROFs = mftclusterChain.GetEntries();
+  mftclusterChain->SetBranchAddress("MFTClusterComp", &mMFTClustersVecP);
+  mftclusterChain->SetBranchAddress("MFTClustersROF", &mMFTClustersROFVecP);
+  mftclusterChain->SetBranchAddress("MFTClusterPatt", &mMFTClusterPatternsVecP);
+  mNumberOfClusterChainROFs = mftclusterChain->GetEntries();
   LOG(info) << "Number of cluster chain entries = " << mNumberOfClusterChainROFs;
 
-  assert(nEntriesClusterChain == nEntriesTrackChain);
-  return nEntriesTrackChain;
+  assert(mNumberOfTrackChainROFs == mNumberOfClusterChainROFs);
+  return mNumberOfTrackChainROFs;
 }
 
 //__________________________________________________________________________
 void AlignHelper::processROF()
 {
-  pattIt = mMFTClusterPatterns.begin();
+  std::vector<unsigned char>::iterator pattIt = mMFTClusterPatterns.begin();
   mMFTClustersGlobal.clear();
   mMFTClustersGlobal.reserve(mMFTClusters.size());
-  o2::mft::ioutils::convertCompactClusters(
-    mMFTClusters, pattIt, mMFTClustersGlobal, mDictionary);
+
+  for (const auto& compCluster : mMFTClusters) {
+
+    auto chipID = compCluster.getChipID();
+    auto pattID = compCluster.getPatternID();
+
+    o2::math_utils::Point3D<float> locXYZ;
+    // Dummy COG errors (about half pixel size)
+    float sigmaX2 = o2::mft::ioutils::DefClusError2Row;
+    float sigmaY2 = o2::mft::ioutils::DefClusError2Col;
+    if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
+      // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
+      sigmaX2 = mDictionary->getErr2X(pattID);
+      // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
+      sigmaY2 = mDictionary->getErr2Z(pattID);
+      if (!mDictionary->isGroup(pattID)) {
+        locXYZ = mDictionary->getClusterCoordinates(compCluster);
+      } else {
+        o2::itsmft::ClusterPattern patt(pattIt);
+        locXYZ = mDictionary->getClusterCoordinates(compCluster, patt);
+      }
+    } else {
+      o2::itsmft::ClusterPattern patt(pattIt);
+      locXYZ = mDictionary->getClusterCoordinates(compCluster, patt, false);
+    }
+    mMFTClustersGlobal.emplace_back(chipID, locXYZ);
+  }
 }
 
 //__________________________________________________________________________
@@ -406,8 +443,8 @@ void AlignHelper::printProcessTrackSummary()
 {
   LOGF(info, "AlignHelper processRecoTracks() summary: ");
   LOGF(info,
-       "n TFs = %d, used tracks = %d, skipped tracks = %d, local equations failed = %d",
-       mNumberTFs, mCounterUsedTracks,
+       "n ROFs = %d, used tracks = %d, skipped tracks = %d, local equations failed = %d",
+       mNumberOfTrackChainROFs, mCounterUsedTracks,
        mCounterSkippedTracks, mCounterLocalEquationFailed);
 }
 
