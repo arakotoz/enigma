@@ -546,7 +546,10 @@ bool AlignHelper::setLocalEquationX()
            "setLocalEquationX(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e X %.3e",
            mCounterUsedTracks,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
-           mGlobalDerivatives[0], mGlobalDerivatives[1], mGlobalDerivatives[2], mGlobalDerivatives[3],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 0],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 1],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 2],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 3],
            mAlignPoint->getLocalMeasuredPosition().X());
 
     mMillepede->SetLocalEquation(
@@ -601,7 +604,10 @@ bool AlignHelper::setLocalEquationY()
            "setLocalEquationY(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Y %.3e",
            mCounterUsedTracks,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
-           mGlobalDerivatives[0], mGlobalDerivatives[1], mGlobalDerivatives[2], mGlobalDerivatives[3],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 0],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 1],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 2],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 3],
            mAlignPoint->getLocalMeasuredPosition().Y());
 
     mMillepede->SetLocalEquation(
@@ -657,7 +663,10 @@ bool AlignHelper::setLocalEquationZ()
            "setLocalEquationZ(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e",
            mCounterUsedTracks,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
-           mGlobalDerivatives[0], mGlobalDerivatives[1], mGlobalDerivatives[2], mGlobalDerivatives[3],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 0],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 1],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 2],
+           mGlobalDerivatives[chipId + mNDofPerSensor + 3],
            mAlignPoint->getLocalMeasuredPosition().Y());
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
