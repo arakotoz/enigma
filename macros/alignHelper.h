@@ -208,7 +208,7 @@ void AlignHelper::init()
   // filenames for the processed tracks and constraints records
   mMillepede->SetDataRecFName(mMilleRecordsFileName.Data());
   mMillepede->SetConsRecFName(mMilleConstraintsRecFileName.Data());
-  bool read = true;
+  bool read = false;
   mMillepede->InitDataRecStorage(read);
 
   LOG(info) << "-------------- Alignment configured with -----------------";
