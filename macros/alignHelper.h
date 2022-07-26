@@ -524,10 +524,10 @@ bool AlignHelper::setLocalEquationX()
   // index [0 .. 3] for {dDeltaX, dDeltaY, dDeltaRz, dDeltaZ}
 
   Int_t chipId = mAlignPoint->getSensorId();
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 0, mAlignPoint->globalDerivativeX().dDeltaX());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 1, mAlignPoint->globalDerivativeX().dDeltaY());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 2, mAlignPoint->globalDerivativeX().dDeltaRz());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 3, mAlignPoint->globalDerivativeX().dDeltaZ());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 0, mAlignPoint->globalDerivativeX().dDeltaX());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 1, mAlignPoint->globalDerivativeX().dDeltaY());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 2, mAlignPoint->globalDerivativeX().dDeltaRz());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 3, mAlignPoint->globalDerivativeX().dDeltaZ());
 
   if (success) {
     if (mCounterUsedTracks < 5)
@@ -535,10 +535,10 @@ bool AlignHelper::setLocalEquationX()
            "setLocalEquationX(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e X %.3e",
            mCounterUsedTracks, chipId,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 0],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 1],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 2],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 3],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 0],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 1],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 2],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 3],
            mAlignPoint->getLocalMeasuredPosition().X());
 
     mMillepede->SetLocalEquation(
@@ -582,10 +582,10 @@ bool AlignHelper::setLocalEquationY()
   // index [0 .. 3] for {dDeltaX, dDeltaY, dDeltaRz, dDeltaZ}
 
   Int_t chipId = mAlignPoint->getSensorId();
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 0, mAlignPoint->globalDerivativeY().dDeltaX());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 1, mAlignPoint->globalDerivativeY().dDeltaY());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 2, mAlignPoint->globalDerivativeY().dDeltaRz());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 3, mAlignPoint->globalDerivativeY().dDeltaZ());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 0, mAlignPoint->globalDerivativeY().dDeltaX());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 1, mAlignPoint->globalDerivativeY().dDeltaY());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 2, mAlignPoint->globalDerivativeY().dDeltaRz());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 3, mAlignPoint->globalDerivativeY().dDeltaZ());
 
   if (success) {
     if (mCounterUsedTracks < 5)
@@ -593,10 +593,10 @@ bool AlignHelper::setLocalEquationY()
            "setLocalEquationY(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Y %.3e",
            mCounterUsedTracks, chipId,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 0],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 1],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 2],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 3],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 0],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 1],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 2],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 3],
            mAlignPoint->getLocalMeasuredPosition().Y());
 
     mMillepede->SetLocalEquation(
@@ -641,10 +641,10 @@ bool AlignHelper::setLocalEquationZ()
   // index [0 .. 3] for {dDeltaX, dDeltaY, dDeltaRz, dDeltaZ}
 
   Int_t chipId = mAlignPoint->getSensorId();
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 0, mAlignPoint->globalDerivativeZ().dDeltaX());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 1, mAlignPoint->globalDerivativeZ().dDeltaY());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 2, mAlignPoint->globalDerivativeZ().dDeltaRz());
-  success &= setGlobalDerivative(chipId + mNDofPerSensor + 3, mAlignPoint->globalDerivativeZ().dDeltaZ());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 0, mAlignPoint->globalDerivativeZ().dDeltaX());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 1, mAlignPoint->globalDerivativeZ().dDeltaY());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 2, mAlignPoint->globalDerivativeZ().dDeltaRz());
+  success &= setGlobalDerivative(chipId * mNDofPerSensor + 3, mAlignPoint->globalDerivativeZ().dDeltaZ());
 
   if (success) {
     if (mCounterUsedTracks < 5)
@@ -652,10 +652,10 @@ bool AlignHelper::setLocalEquationZ()
            "setLocalEquationZ(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e",
            mCounterUsedTracks, chipId,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 0],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 1],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 2],
-           mGlobalDerivatives[chipId + mNDofPerSensor + 3],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 0],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 1],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 2],
+           mGlobalDerivatives[chipId * mNDofPerSensor + 3],
            mAlignPoint->getLocalMeasuredPosition().Y());
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
