@@ -28,8 +28,7 @@
 // runAlign()
 
 void runAlign(const Int_t fileStop = 4315,
-              const bool preferAlignedFile = true,
-              bool saveTrackRecordToFile = false)
+              const bool preferAlignedFile = true)
 {
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
@@ -88,8 +87,6 @@ void runAlign(const Int_t fileStop = 4315,
 
   aligner.setGeometry(geom);
   aligner.setClusterDictionary(&dict);
-
-  aligner.setSaveTrackRecordToFile(saveTrackRecordToFile);
 
   AlignHelper::AlignConfig alignConfigParam;
   aligner.setChi2CutNStdDev(alignConfigParam.chi2CutNStdDev);
