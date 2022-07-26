@@ -339,6 +339,9 @@ void AlignHelper::processRecoTracks()
       mAlignPoint->setGlobalRecoPosition(oneTrack);
       mAlignPoint->setLocalMeasuredPosition(globalCluster);
 
+      // compute residuals
+      mAlignPoint->setLocalResidual();
+
       // Compute derivatives
       mAlignPoint->computeLocalDerivatives();
       mAlignPoint->computeGlobalDerivatives();
@@ -529,8 +532,8 @@ bool AlignHelper::setLocalEquationX()
   if (success) {
     if (mCounterUsedTracks < 5)
       LOGF(info,
-           "setLocalEquationX(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e X %.3e",
-           mCounterUsedTracks,
+           "setLocalEquationX(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e X %.3e",
+           mCounterUsedTracks, chipId,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
            mGlobalDerivatives[chipId + mNDofPerSensor + 0],
            mGlobalDerivatives[chipId + mNDofPerSensor + 1],
@@ -587,8 +590,8 @@ bool AlignHelper::setLocalEquationY()
   if (success) {
     if (mCounterUsedTracks < 5)
       LOGF(info,
-           "setLocalEquationY(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Y %.3e",
-           mCounterUsedTracks,
+           "setLocalEquationY(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Y %.3e",
+           mCounterUsedTracks, chipId,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
            mGlobalDerivatives[chipId + mNDofPerSensor + 0],
            mGlobalDerivatives[chipId + mNDofPerSensor + 1],
@@ -646,8 +649,8 @@ bool AlignHelper::setLocalEquationZ()
   if (success) {
     if (mCounterUsedTracks < 5)
       LOGF(info,
-           "setLocalEquationZ(): track %i local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e",
-           mCounterUsedTracks,
+           "setLocalEquationZ(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e",
+           mCounterUsedTracks, chipId, ,
            mLocalDerivatives[0], mLocalDerivatives[1], mLocalDerivatives[2], mLocalDerivatives[3],
            mGlobalDerivatives[chipId + mNDofPerSensor + 0],
            mGlobalDerivatives[chipId + mNDofPerSensor + 1],
