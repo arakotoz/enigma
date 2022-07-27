@@ -39,6 +39,7 @@ class AlignHelper
     Double_t allowedVarDeltaY = 0.5;    ///< allowed max delta in y-translation (cm)
     Double_t allowedVarDeltaZ = 0.5;    ///< allowed max delta in z-translation (cm)
     Double_t allowedVarDeltaRz = 0.01;  ///< allowed max delta in rotation around z-axis (rad)
+    Double_t chi2CutFactor = 256.;      ///< used to reject outliers i.e. bad tracks with sum(chi2) > Chi2DoFLim(fNStdDev, nDoF) * fChi2CutFactor
   };
 
  public:
@@ -64,6 +65,7 @@ class AlignHelper
   void setAllowedVariationDeltaY(const double value) { mAllowVar[1] = value; }
   void setAllowedVariationDeltaZ(const double value) { mAllowVar[3] = value; }
   void setAllowedVariationDeltaRz(const double value) { mAllowVar[2] = value; }
+  void setChi2CutFactor(const double value) { mStartFac = value; }
 
   /// \brief set pointer to geometry prepared outside of the class i.e. already had fillMatrixCache()
   void setGeometry(const o2::mft::GeometryTGeo* geom) { mGeometry = geom; }
