@@ -540,7 +540,7 @@ bool AlignHelper::setLocalEquationX()
            mGlobalDerivatives[chipId * mNDofPerSensor + 1],
            mGlobalDerivatives[chipId * mNDofPerSensor + 2],
            mGlobalDerivatives[chipId * mNDofPerSensor + 3],
-           mAlignPoint->getLocalMeasuredPosition().X(),
+           mAlignPoint->getLocalResidual().X(),
            mAlignPoint->getMeasuredPositionSigma().X());
       debugPrint = true;
     }
@@ -548,7 +548,7 @@ bool AlignHelper::setLocalEquationX()
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
-      mAlignPoint->getLocalMeasuredPosition().X(),
+      mAlignPoint->getLocalResidual().X(),
       mAlignPoint->getMeasuredPositionSigma().X(),
       debugPrint);
   } else {
@@ -603,7 +603,7 @@ bool AlignHelper::setLocalEquationY()
            mGlobalDerivatives[chipId * mNDofPerSensor + 1],
            mGlobalDerivatives[chipId * mNDofPerSensor + 2],
            mGlobalDerivatives[chipId * mNDofPerSensor + 3],
-           mAlignPoint->getLocalMeasuredPosition().Y(),
+           mAlignPoint->getLocalResidual().Y(),
            mAlignPoint->getMeasuredPositionSigma().Y());
       debugPrint = true;
     }
@@ -611,7 +611,7 @@ bool AlignHelper::setLocalEquationY()
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
-      mAlignPoint->getLocalMeasuredPosition().Y(),
+      mAlignPoint->getLocalResidual().Y(),
       mAlignPoint->getMeasuredPositionSigma().Y(),
       debugPrint);
   } else {
@@ -667,7 +667,7 @@ bool AlignHelper::setLocalEquationZ()
            mGlobalDerivatives[chipId * mNDofPerSensor + 1],
            mGlobalDerivatives[chipId * mNDofPerSensor + 2],
            mGlobalDerivatives[chipId * mNDofPerSensor + 3],
-           mAlignPoint->getLocalMeasuredPosition().Z(),
+           mAlignPoint->getLocalResidual().Z(),
            mAlignPoint->getMeasuredPositionSigma().Z());
       debugPrint = true;
     }
@@ -675,7 +675,7 @@ bool AlignHelper::setLocalEquationZ()
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
-      mAlignPoint->getLocalMeasuredPosition().Z(),
+      mAlignPoint->getLocalResidual().Z(),
       mAlignPoint->getMeasuredPositionSigma().Z(),
       debugPrint);
   } else {
