@@ -677,7 +677,7 @@ bool AlignHelper::setLocalEquationZ()
       mLocalDerivatives,
       mAlignPoint->getLocalMeasuredPosition().Z(),
       mAlignPoint->getMeasuredPositionSigma().Z(),
-      deugPrint);
+      debugPrint);
   } else {
     mCounterLocalEquationFailed++;
   }
