@@ -72,7 +72,7 @@ class AlignHelper
   AlignHelper();
 
   /// \brief destructor
-  ~AlignHelper() = default;
+  ~AlignHelper();
 
   /// \brief init Millipede and AlignPointHelper
   void init();
@@ -126,8 +126,8 @@ class AlignHelper
   static o2::itsmft::ChipMappingMFT mChipMapping;                                ///< MFT chip <-> ladder, layer, disk, half mapping
   static constexpr int mNumberOfSensors = mChipMapping.getNChips();              ///< Total number of sensors (detection elements) in the MFT
   static constexpr int mNumberOfGlobalParam = mNDofPerSensor * mNumberOfSensors; ///< Number of alignment (= global) parameters
-  Double_t mGlobalDerivatives[mNumberOfGlobalParam];                             ///< Array of global derivatives {dDeltaX, dDeltaY, dDeltaRz, dDeltaZ}
-  Double_t mLocalDerivatives[mNumberOfTrackParam];                               ///< Array of local derivatives {dX0, dTx, dY0, dTz}
+  double* mGlobalDerivatives = nullptr;                                          ///< Array of global derivatives {dDeltaX, dDeltaY, dDeltaRz, dDeltaZ}
+  double* mLocalDerivatives = nullptr;                                           ///< Array of local derivatives {dX0, dTx, dY0, dTz}
   std::array<Double_t, mNDofPerSensor> mAllowVar;                                ///< "Encouraged" variation for degrees of freedom {dx, dy, dRz, dz}
   double mStartFac = 256;                                                        ///< Initial value for chi2 cut (if > 1, iterations in Millepede are turned on)
   Int_t mChi2CutNStdDev = 3;                                                     ///< Number of standard deviations for chi2 cut
@@ -143,7 +143,7 @@ class AlignHelper
   std::unique_ptr<o2::mft::AlignPointHelper> mAlignPoint = nullptr;              ///< AlignHelper point helper
   std::vector<o2::detectors::AlignParam> mAlignParams;                           ///< vector of alignment parameters computed by Millepede global fit
   bool mIsInitDone = false;                                                      ///< boolean to follow the initialisation status
-  Int_t mGlobalParameterStatus[mNumberOfGlobalParam];                            ///< Array of effective degrees of freedom, used to fix detectors, parameters, etc.
+  int* mGlobalParameterStatus = nullptr;                                         ///< Array of effective degrees of freedom, used to fix detectors, parameters, etc.
 
   // used to fix some degrees of freedom
 
@@ -199,6 +199,8 @@ AlignHelper::AlignHelper()
     mCounterLocalEquationFailed(0),
     mCounterSkippedTracks(0),
     mCounterUsedTracks(0),
+    mGlobalDerivatives(nullptr),
+    mLocalDerivatives(nullptr),
     mStartFac(256),
     mChi2CutNStdDev(3),
     mResCutInitial(100.),
@@ -208,16 +210,24 @@ AlignHelper::AlignHelper()
     mMilleRecordsFileName("mft_mille_records.root"),
     mMilleConstraintsRecFileName("mft_mille_constraints.root"),
     mIsInitDone(false),
+    mGlobalParameterStatus(nullptr),
     mFile(nullptr),
     mTree(nullptr)
 {
-  mMillepede = std::make_unique<MillePede2>();
   // default allowed variations w.r.t. global system coordinates
   mAllowVar[0] = 0.5;  // delta translation in x (cm)
   mAllowVar[1] = 0.5;  // delta translation in y (cm)
   mAllowVar[2] = 0.01; // rotation angle Rz around z-axis (rad)
   mAllowVar[3] = 0.5;  // delta translation in z (cm)
 
+  mGlobalDerivatives = (double*)malloc(sizeof(double) * mNumberOfGlobalParam);
+  mLocalDerivatives = new Double_t[mNumberOfTrackParam];
+
+  // initialise the content of each array
+  resetGlocalDerivative();
+  resetLocalDerivative();
+
+  mGlobalParameterStatus = (int*)malloc(sizeof(int) * mNumberOfGlobalParam);
   for (int iPar = 0; iPar < mNumberOfGlobalParam; iPar++) {
     mGlobalParameterStatus[iPar] = mFreeParId;
   }
@@ -243,6 +253,15 @@ AlignHelper::AlignHelper()
   mPointInfo.recoLocalX = 0;
   mPointInfo.recoLocalY = 0;
   mPointInfo.recoLocalZ = 0;
+  LOGF(info, "AlignHelper instantiated");
+}
+
+//__________________________________________________________________________
+AlignHelper::~AlignHelper()
+{
+  free(mGlobalDerivatives);
+  delete[] mLocalDerivatives;
+  free(mGlobalParameterStatus);
 }
 
 //__________________________________________________________________________
@@ -255,6 +274,7 @@ void AlignHelper::init()
     mIsInitDone = false;
     return;
   }
+  mMillepede = std::make_unique<MillePede2>();
   mAlignPoint = std::make_unique<AlignPointHelper>();
   mAlignPoint->setClusterDictionary(mDictionary);
   mMillepede->InitMille(mNumberOfGlobalParam,
@@ -737,7 +757,7 @@ bool AlignHelper::setLocalEquationZ()
 
   if (success) {
     bool debugPrint = false;
-    if (mCounterUsedTracks < 5) {
+    if (mCounterUsedTracks) {
       LOGF(info,
            "setLocalEquationZ(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e sigma %.3e",
            mCounterUsedTracks, chipId,
@@ -791,7 +811,7 @@ void AlignHelper::fillTree()
     mPointInfo.recoLocalY = mAlignPoint->getLocalRecoPosition().Y();
     mPointInfo.recoLocalZ = mAlignPoint->getLocalRecoPosition().Z();
 
-    if (mCounterUsedTracks < 20) {
+    if (mCounterUsedTracks < 5) {
       LOGF(info, "track %i h %d d %d l %d s %4d lMpos x %.2e y %.2e z %.2e gMpos x %.2e y %.2e z %.2e",
            mCounterUsedTracks, mPointInfo.half, mPointInfo.disk, mPointInfo.layer, mPointInfo.sensor,
            mPointInfo.measuredLocalX, mPointInfo.measuredLocalY, mPointInfo.measuredLocalZ,
