@@ -167,16 +167,16 @@ class AlignHelper
   void fillTree();
 
   /// \brief set array of local derivatives
-  bool setLocalDerivative(Int_t index, Double_t value);
+  bool setLocalDerivative(int index, double value);
 
   /// \brief set array of global derivatives
-  bool setGlobalDerivative(Int_t index, Double_t value);
+  bool setGlobalDerivative(int index, double value);
 
   /// \brief reset the array of the Local derivative
-  void resetLocalDerivative();
+  bool resetLocalDerivative();
 
   /// \brief reset the array of the Global derivative
-  void resetGlocalDerivative();
+  bool resetGlocalDerivative();
 
   /// \brief set the first component of the local equation vector for a given alignment point
   bool setLocalEquationX();
@@ -352,7 +352,7 @@ void AlignHelper::processRecoTracks()
     return;
   }
 
-  for (auto oneTrack : mMFTTracks) { // track loop
+  for (const auto& oneTrack : mMFTTracks) { // track loop
 
     // Skip the track if not enough clusters
     auto ncls = oneTrack.getNumberOfPoints();
@@ -381,13 +381,15 @@ void AlignHelper::processRecoTracks()
 
       // Store measured positions
       auto clsEntry = mMFTTrackClusIdx[offset + icls];
-      mAlignPoint->setMeasuredPosition(mMFTClusters[clsEntry], pattIt);
+      const auto compCluster = mMFTClusters[clsEntry];
+      mAlignPoint->setMeasuredPosition(compCluster, pattIt);
 
       // Propagate track to the current z plane of this cluster
-      oneTrack.propagateParamToZlinear(mAlignPoint->getGlobalMeasuredPosition().Z());
+      auto track = oneTrack;
+      track.propagateParamToZlinear(mAlignPoint->getGlobalMeasuredPosition().Z());
 
       // Store reco positions
-      mAlignPoint->setGlobalRecoPosition(oneTrack);
+      mAlignPoint->setGlobalRecoPosition(track);
 
       // compute residuals
       mAlignPoint->setLocalResidual();
@@ -544,59 +546,66 @@ void AlignHelper::closeTree()
 }
 
 //__________________________________________________________________________
-bool AlignHelper::setLocalDerivative(Int_t index, Double_t value)
+bool AlignHelper::setLocalDerivative(int index, double value)
 {
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
 
-  bool success = true;
+  bool success = false;
   if (index < mNumberOfTrackParam) {
     mLocalDerivatives[index] = value;
+    success = true;
   } else {
     LOGF(error,
          "AlignHelper::setLocalDerivative() - index %d >= %d",
          index, mNumberOfTrackParam);
-    success = false;
   }
   return success;
 }
 
 //__________________________________________________________________________
-bool AlignHelper::setGlobalDerivative(Int_t index, Double_t value)
+bool AlignHelper::setGlobalDerivative(int index, double value)
 {
   // index [0 .. 3] for {dDeltaX, dDeltaY, dDeltaRz, dDeltaZ}
 
-  bool success = true;
+  bool success = false;
   if (index < mNumberOfGlobalParam) {
     mGlobalDerivatives[index] = value;
+    success = true;
   } else {
     LOGF(error,
          "AlignHelper::setGlobalDerivative() - index %d >= %d",
          index, mNumberOfGlobalParam);
-    success = false;
   }
   return success;
 }
 
 //__________________________________________________________________________
-void AlignHelper::resetLocalDerivative()
+bool AlignHelper::resetLocalDerivative()
 {
+  bool success = false;
   for (int i = 0; i < mNumberOfTrackParam; ++i) {
+    success = false;
     mLocalDerivatives[i] = 0.0;
+    success = true;
   }
+  return success;
 }
 
 //__________________________________________________________________________
-void AlignHelper::resetGlocalDerivative()
+bool AlignHelper::resetGlocalDerivative()
 {
+  bool success = false;
   for (int i = 0; i < mNumberOfGlobalParam; ++i) {
+    success = false;
     mGlobalDerivatives[i] = 0.0;
+    success = true;
   }
+  return success;
 }
 
 //__________________________________________________________________________
 bool AlignHelper::setLocalEquationX()
 {
-
   if (!mAlignPoint->isAlignPointSet())
     return false;
   if (!mAlignPoint->isGlobalDerivativeDone())
@@ -604,12 +613,12 @@ bool AlignHelper::setLocalEquationX()
   if (!mAlignPoint->isLocalDerivativeDone())
     return false;
 
+  bool success = true;
+
   // clean slate for the local equation for this measurement
 
-  resetGlocalDerivative();
-  resetLocalDerivative();
-
-  bool success = true;
+  success &= resetGlocalDerivative();
+  success &= resetLocalDerivative();
 
   // local derivatives
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
@@ -667,12 +676,12 @@ bool AlignHelper::setLocalEquationY()
   if (!mAlignPoint->isLocalDerivativeDone())
     return false;
 
+  bool success = true;
+
   // clean slate for the local equation for this measurement
 
-  resetGlocalDerivative();
-  resetLocalDerivative();
-
-  bool success = true;
+  success &= resetGlocalDerivative();
+  success &= resetLocalDerivative();
 
   // local derivatives
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
@@ -731,12 +740,12 @@ bool AlignHelper::setLocalEquationZ()
   if (!mAlignPoint->isLocalDerivativeDone())
     return false;
 
+  bool success = true;
+
   // clean slate for the local equation for this measurement
 
-  resetGlocalDerivative();
-  resetLocalDerivative();
-
-  bool success = true;
+  success &= resetGlocalDerivative();
+  success &= resetLocalDerivative();
 
   // local derivatives
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
@@ -757,7 +766,7 @@ bool AlignHelper::setLocalEquationZ()
 
   if (success) {
     bool debugPrint = false;
-    if (mCounterUsedTracks < 5) {
+    if (mCounterUsedTracks) {
       LOGF(info,
            "setLocalEquationZ(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e sigma %.3e",
            mCounterUsedTracks, chipId,
