@@ -382,7 +382,6 @@ void AlignHelper::processRecoTracks()
 
     for (int icls = 0; icls < ncls; ++icls) { // cluster loop
 
-      mAlignPoint->resetDerivatives();
       mAlignPoint->resetAlignPoint();
 
       // Store measured positions
