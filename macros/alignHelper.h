@@ -27,6 +27,31 @@
 
 using namespace o2::mft;
 
+struct AlignPoint {
+  UShort_t sensor;          // sensor id
+  UShort_t layer;           // layer id
+  UShort_t disk;            // disk id
+  UShort_t half;            // half id
+  Double_t measuredGlobalX; // cluster x, global frame (cm)
+  Double_t measuredGlobalY; // cluster y, global frame (cm)
+  Double_t measuredGlobalZ; // cluster z, global frame (cm)
+  Double_t measuredLocalX;  // cluster x, local frame (cm)
+  Double_t measuredLocalY;  // cluster y, local frame (cm)
+  Double_t measuredLocalZ;  // cluster z, local frame (cm)
+  Double_t residualX;       // track global x - cluster global x (cm)
+  Double_t residualY;       // track global y - cluster global y (cm)
+  Double_t residualZ;       // track global z - cluster global z (cm)
+  Double_t residualLocalX;  // track local x - cluster local x (cm)
+  Double_t residualLocalY;  // track local y - cluster local y (cm)
+  Double_t residualLocalZ;  // track local z - cluster local z (cm)
+  Double_t recoGlobalX;     // track x, global frame (cm)
+  Double_t recoGlobalY;     // track y, global frame (cm)
+  Double_t recoGlobalZ;     // track z, global frame (cm)
+  Double_t recoLocalX;      // track x, local frame (cm)
+  Double_t recoLocalY;      // track y, local frame (cm)
+  Double_t recoLocalZ;      // track z, local frame (cm)
+};
+
 class AlignHelper
 {
  public:
@@ -67,9 +92,6 @@ class AlignHelper
   void setAllowedVariationDeltaRz(const double value) { mAllowVar[2] = value; }
   void setChi2CutFactor(const double value) { mStartFac = value; }
 
-  /// \brief set pointer to geometry prepared outside of the class i.e. already had fillMatrixCache()
-  void setGeometry(const o2::mft::GeometryTGeo* geom) { mGeometry = geom; }
-
   /// \brief access mft tracks and clusters in the ROOT files, return total number of ROFs
   int connectToTChains(TChain* mfttrackChain, TChain* mftclusterChain);
 
@@ -87,6 +109,9 @@ class AlignHelper
 
   /// \brief provide access to the AlignParam vector
   void getAlignParams(std::vector<o2::detectors::AlignParam>& alignParams) { alignParams = mAlignParams; }
+
+  void initTree();
+  void closeTree();
 
  protected:
   int mRunNumber = 0;                                                            ///< run number
@@ -117,7 +142,6 @@ class AlignHelper
   const o2::itsmft::TopologyDictionary* mDictionary = nullptr;                   ///< cluster patterns dictionary
   std::unique_ptr<o2::mft::AlignPointHelper> mAlignPoint = nullptr;              ///< AlignHelper point helper
   std::vector<o2::detectors::AlignParam> mAlignParams;                           ///< vector of alignment parameters computed by Millepede global fit
-  const o2::mft::GeometryTGeo* mGeometry = nullptr;                              ///< geometry that must be initialised outside of Alignment
   bool mIsInitDone = false;                                                      ///< boolean to follow the initialisation status
   Int_t mGlobalParameterStatus[mNumberOfGlobalParam];                            ///< Array of effective degrees of freedom, used to fix detectors, parameters, etc.
 
@@ -134,7 +158,13 @@ class AlignHelper
   std::vector<o2::itsmft::CompClusterExt> mMFTClusters, *mMFTClustersVecP = &mMFTClusters;
   std::vector<o2::itsmft::ROFRecord> mMFTClustersROF, *mMFTClustersROFVecP = &mMFTClustersROF;
   std::vector<unsigned char> mMFTClusterPatterns, *mMFTClusterPatternsVecP = &mMFTClusterPatterns;
-  std::vector<o2::BaseCluster<float>> mMFTClustersGlobal;
+  std::vector<unsigned char>::iterator pattIt;
+
+  TFile* mFile;
+  TTree* mTree;
+  AlignPoint mPointInfo;
+
+  void fillTree();
 
   /// \brief set array of local derivatives
   bool setLocalDerivative(Int_t index, Double_t value);
@@ -177,7 +207,9 @@ AlignHelper::AlignHelper()
     mWeightRecord(1.),
     mMilleRecordsFileName("mft_mille_records.root"),
     mMilleConstraintsRecFileName("mft_mille_constraints.root"),
-    mIsInitDone(false)
+    mIsInitDone(false),
+    mFile(nullptr),
+    mTree(nullptr)
 {
   mMillepede = std::make_unique<MillePede2>();
   // default allowed variations w.r.t. global system coordinates
@@ -189,6 +221,28 @@ AlignHelper::AlignHelper()
   for (int iPar = 0; iPar < mNumberOfGlobalParam; iPar++) {
     mGlobalParameterStatus[iPar] = mFreeParId;
   }
+  mPointInfo.sensor = 0;
+  mPointInfo.layer = 0;
+  mPointInfo.disk = 0;
+  mPointInfo.half = 0;
+  mPointInfo.measuredGlobalX = 0;
+  mPointInfo.measuredGlobalY = 0;
+  mPointInfo.measuredGlobalZ = 0;
+  mPointInfo.measuredLocalX = 0;
+  mPointInfo.measuredLocalY = 0;
+  mPointInfo.measuredLocalZ = 0;
+  mPointInfo.residualX = 0;
+  mPointInfo.residualY = 0;
+  mPointInfo.residualZ = 0;
+  mPointInfo.residualLocalX = 0;
+  mPointInfo.residualLocalY = 0;
+  mPointInfo.residualLocalZ = 0;
+  mPointInfo.recoGlobalX = 0;
+  mPointInfo.recoGlobalY = 0;
+  mPointInfo.recoGlobalZ = 0;
+  mPointInfo.recoLocalX = 0;
+  mPointInfo.recoLocalY = 0;
+  mPointInfo.recoLocalZ = 0;
 }
 
 //__________________________________________________________________________
@@ -196,12 +250,13 @@ void AlignHelper::init()
 {
   if (mIsInitDone)
     return;
-  if (mGeometry == nullptr) {
-    LOGF(fatal, "AlignHelper::init() failed because no geometry is defined");
+  if (mDictionary == nullptr) {
+    LOGF(fatal, "Alignment::init() failed because no cluster dictionary is defined");
     mIsInitDone = false;
     return;
   }
-  mAlignPoint = std::make_unique<AlignPointHelper>(mGeometry);
+  mAlignPoint = std::make_unique<AlignPointHelper>();
+  mAlignPoint->setClusterDictionary(mDictionary);
   mMillepede->InitMille(mNumberOfGlobalParam,
                         mNumberOfTrackParam,
                         mChi2CutNStdDev,
@@ -210,9 +265,9 @@ void AlignHelper::init()
   // filenames for the processed tracks and constraints records
   mMillepede->SetDataRecFName(mMilleRecordsFileName.Data());
   mMillepede->SetConsRecFName(mMilleConstraintsRecFileName.Data());
+
   bool read = false;
   mMillepede->InitDataRecStorage(read);
-
   LOG(info) << "-------------- Alignment configured with -----------------";
   LOGF(info, "Chi2CutNStdDev = %d", mChi2CutNStdDev);
   LOGF(info, "ResidualCutInitial = %.3f", mResCutInitial);
@@ -235,6 +290,8 @@ void AlignHelper::init()
   if (mStartFac > 1) {
     mMillepede->SetIterations(mStartFac);
   }
+
+  initTree();
 
   LOGF(info, "AlignHelper init done");
   mIsInitDone = true;
@@ -264,36 +321,7 @@ int AlignHelper::connectToTChains(TChain* mfttrackChain, TChain* mftclusterChain
 //__________________________________________________________________________
 void AlignHelper::processROF()
 {
-  std::vector<unsigned char>::iterator pattIt = mMFTClusterPatterns.begin();
-  mMFTClustersGlobal.clear();
-  mMFTClustersGlobal.reserve(mMFTClusters.size());
-
-  for (const auto& compCluster : mMFTClusters) {
-
-    auto chipID = compCluster.getChipID();
-    auto pattID = compCluster.getPatternID();
-
-    o2::math_utils::Point3D<float> locXYZ;
-    // Dummy COG errors (about half pixel size)
-    float sigmaX2 = o2::mft::ioutils::DefClusError2Row;
-    float sigmaY2 = o2::mft::ioutils::DefClusError2Col;
-    if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
-      // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
-      sigmaX2 = mDictionary->getErr2X(pattID);
-      // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
-      sigmaY2 = mDictionary->getErr2Z(pattID);
-      if (!mDictionary->isGroup(pattID)) {
-        locXYZ = mDictionary->getClusterCoordinates(compCluster);
-      } else {
-        o2::itsmft::ClusterPattern patt(pattIt);
-        locXYZ = mDictionary->getClusterCoordinates(compCluster, patt);
-      }
-    } else {
-      o2::itsmft::ClusterPattern patt(pattIt);
-      locXYZ = mDictionary->getClusterCoordinates(compCluster, patt, false);
-    }
-    mMFTClustersGlobal.emplace_back(chipID, locXYZ);
-  }
+  pattIt = mMFTClusterPatterns.begin();
 }
 
 //__________________________________________________________________________
@@ -331,18 +359,20 @@ void AlignHelper::processRecoTracks()
       mAlignPoint->resetDerivatives();
       mAlignPoint->resetAlignPoint();
 
+      // Store measured positions
       auto clsEntry = mMFTTrackClusIdx[offset + icls];
-      auto globalCluster = mMFTClustersGlobal[clsEntry];
+      mAlignPoint->setMeasuredPosition(mMFTClusters[clsEntry], pattIt);
 
       // Propagate track to the current z plane of this cluster
-      oneTrack.propagateParamToZlinear(globalCluster.getZ());
+      oneTrack.propagateParamToZlinear(mAlignPoint->getGlobalMeasuredPosition().Z());
 
-      // Store reco and measured positions
+      // Store reco positions
       mAlignPoint->setGlobalRecoPosition(oneTrack);
-      mAlignPoint->setLocalMeasuredPosition(globalCluster);
 
       // compute residuals
       mAlignPoint->setLocalResidual();
+      mAlignPoint->setGlobalResidual();
+      fillTree();
 
       // Compute derivatives
       mAlignPoint->computeLocalDerivatives();
@@ -405,7 +435,7 @@ void AlignHelper::globalFit()
   LOGF(info, "AlignHelper: done fitting global parameters");
   LOGF(info, "sensor info, dx (cm), dy (cm), dz (cm), dRz (rad)");
 
-  AlignSensorHelper chipHelper(mGeometry);
+  AlignSensorHelper chipHelper;
   double dRx = 0., dRy = 0., dRz = 0.; // delta rotations
   double dx = 0., dy = 0., dz = 0.;    // delta translations
   bool global = true;                  // delta in global ref. system
@@ -444,6 +474,53 @@ void AlignHelper::printProcessTrackSummary()
        "n ROFs = %d, used tracks = %d, skipped tracks = %d, local equations failed = %d",
        mNumberOfTrackChainROFs, mCounterUsedTracks,
        mCounterSkippedTracks, mCounterLocalEquationFailed);
+}
+
+//__________________________________________________________________________
+void AlignHelper::initTree()
+{
+  mFile = TFile::Open("align_point.root", "recreate", "", 505);
+
+  mTree = new TTree("point", "the align point info tree");
+  mTree->Branch("sensor", &mPointInfo.sensor, "sensor/s");
+  mTree->Branch("layer", &mPointInfo.layer, "layer/s");
+  mTree->Branch("disk", &mPointInfo.disk, "disk/s");
+  mTree->Branch("half", &mPointInfo.half, "half/s");
+  mTree->Branch("measuredGlobalX", &mPointInfo.measuredGlobalX, "measuredGlobalX/D");
+  mTree->Branch("measuredGlobalY", &mPointInfo.measuredGlobalY, "measuredGlobalY/D");
+  mTree->Branch("measuredGlobalZ", &mPointInfo.measuredGlobalZ, "measuredGlobalZ/D");
+  mTree->Branch("measuredLocalX", &mPointInfo.measuredLocalX, "measuredLocalX/D");
+  mTree->Branch("measuredLocalY", &mPointInfo.measuredLocalY, "measuredLocalY/D");
+  mTree->Branch("measuredLocalZ", &mPointInfo.measuredLocalZ, "measuredLocalZ/D");
+  mTree->Branch("residualX", &mPointInfo.residualX, "residualX/D");
+  mTree->Branch("residualY", &mPointInfo.residualY, "residualY/D");
+  mTree->Branch("residualZ", &mPointInfo.residualZ, "residualZ/D");
+  mTree->Branch("residualLocalX", &mPointInfo.residualLocalX, "residualLocalX/D");
+  mTree->Branch("residualLocalY", &mPointInfo.residualLocalY, "residualLocalY/D");
+  mTree->Branch("residualLocalZ", &mPointInfo.residualLocalZ, "residualLocalZ/D");
+  mTree->Branch("recoGlobalX", &mPointInfo.recoGlobalX, "recoGlobalX/D");
+  mTree->Branch("recoGlobalY", &mPointInfo.recoGlobalY, "recoGlobalY/D");
+  mTree->Branch("recoGlobalZ", &mPointInfo.recoGlobalZ, "recoGlobalZ/D");
+  mTree->Branch("recoLocalX", &mPointInfo.recoLocalX, "recoLocalX/D");
+  mTree->Branch("recoLocalY", &mPointInfo.recoLocalY, "recoLocalY/D");
+  mTree->Branch("recoLocalZ", &mPointInfo.recoLocalZ, "recoLocalZ/D");
+}
+
+//__________________________________________________________________________
+void AlignHelper::closeTree()
+{
+  if (mTree) {
+    if (mFile && mFile->IsWritable()) {
+      mFile->cd();
+      mTree->Write();
+    }
+    delete mTree;
+    if (mFile) {
+      mFile->Close();
+      delete mFile;
+    }
+  }
+  LOG(info) << "Closed file align_point.root";
 }
 
 //__________________________________________________________________________
@@ -542,16 +619,16 @@ bool AlignHelper::setLocalEquationX()
            mGlobalDerivatives[chipId * mNDofPerSensor + 1],
            mGlobalDerivatives[chipId * mNDofPerSensor + 2],
            mGlobalDerivatives[chipId * mNDofPerSensor + 3],
-           mAlignPoint->getLocalResidual().X(),
-           mAlignPoint->getMeasuredPositionSigma().X());
+           mAlignPoint->getLocalMeasuredPosition().X(),
+           mAlignPoint->getLocalMeasuredPositionSigma().X());
       debugPrint = true;
     }
 
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
-      mAlignPoint->getLocalResidual().X(),
-      mAlignPoint->getMeasuredPositionSigma().X(),
+      mAlignPoint->getLocalMeasuredPosition().X(),
+      mAlignPoint->getLocalMeasuredPositionSigma().X(),
       debugPrint);
   } else {
     mCounterLocalEquationFailed++;
@@ -605,16 +682,16 @@ bool AlignHelper::setLocalEquationY()
            mGlobalDerivatives[chipId * mNDofPerSensor + 1],
            mGlobalDerivatives[chipId * mNDofPerSensor + 2],
            mGlobalDerivatives[chipId * mNDofPerSensor + 3],
-           mAlignPoint->getLocalResidual().Y(),
-           mAlignPoint->getMeasuredPositionSigma().Y());
+           mAlignPoint->getLocalMeasuredPosition().Y(),
+           mAlignPoint->getLocalMeasuredPositionSigma().Y());
       debugPrint = true;
     }
 
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
-      mAlignPoint->getLocalResidual().Y(),
-      mAlignPoint->getMeasuredPositionSigma().Y(),
+      mAlignPoint->getLocalMeasuredPosition().Y(),
+      mAlignPoint->getLocalMeasuredPositionSigma().Y(),
       debugPrint);
   } else {
     mCounterLocalEquationFailed++;
@@ -669,20 +746,57 @@ bool AlignHelper::setLocalEquationZ()
            mGlobalDerivatives[chipId * mNDofPerSensor + 1],
            mGlobalDerivatives[chipId * mNDofPerSensor + 2],
            mGlobalDerivatives[chipId * mNDofPerSensor + 3],
-           mAlignPoint->getLocalResidual().Z(),
-           mAlignPoint->getMeasuredPositionSigma().Z());
+           mAlignPoint->getLocalMeasuredPosition().Z(),
+           mAlignPoint->getLocalMeasuredPositionSigma().Z());
       debugPrint = true;
     }
 
     mMillepede->SetLocalEquation(
       mGlobalDerivatives,
       mLocalDerivatives,
-      mAlignPoint->getLocalResidual().Z(),
-      mAlignPoint->getMeasuredPositionSigma().Z(),
+      mAlignPoint->getLocalMeasuredPosition().Z(),
+      mAlignPoint->getLocalMeasuredPositionSigma().Z(),
       debugPrint);
   } else {
     mCounterLocalEquationFailed++;
   }
 
   return success;
+}
+
+//__________________________________________________________________________
+void AlignHelper::fillTree()
+{
+  if (mTree) {
+    mPointInfo.sensor = mAlignPoint->getSensorId();
+    mPointInfo.layer = mAlignPoint->layer();
+    mPointInfo.disk = mAlignPoint->disk();
+    mPointInfo.half = mAlignPoint->half();
+    mPointInfo.measuredGlobalX = mAlignPoint->getGlobalMeasuredPosition().X();
+    mPointInfo.measuredGlobalY = mAlignPoint->getGlobalMeasuredPosition().Y();
+    mPointInfo.measuredGlobalZ = mAlignPoint->getGlobalMeasuredPosition().Z();
+    mPointInfo.measuredLocalX = mAlignPoint->getLocalMeasuredPosition().X();
+    mPointInfo.measuredLocalY = mAlignPoint->getLocalMeasuredPosition().Y();
+    mPointInfo.measuredLocalZ = mAlignPoint->getLocalMeasuredPosition().Z();
+    mPointInfo.residualX = mAlignPoint->getGlobalResidual().X();
+    mPointInfo.residualY = mAlignPoint->getGlobalResidual().Y();
+    mPointInfo.residualZ = mAlignPoint->getGlobalResidual().Z();
+    mPointInfo.residualLocalX = mAlignPoint->getLocalResidual().X();
+    mPointInfo.residualLocalY = mAlignPoint->getLocalResidual().Y();
+    mPointInfo.residualLocalZ = mAlignPoint->getLocalResidual().Z();
+    mPointInfo.recoGlobalX = mAlignPoint->getGlobalRecoPosition().X();
+    mPointInfo.recoGlobalY = mAlignPoint->getGlobalRecoPosition().Y();
+    mPointInfo.recoGlobalZ = mAlignPoint->getGlobalRecoPosition().Z();
+    mPointInfo.recoLocalX = mAlignPoint->getLocalRecoPosition().X();
+    mPointInfo.recoLocalY = mAlignPoint->getLocalRecoPosition().Y();
+    mPointInfo.recoLocalZ = mAlignPoint->getLocalRecoPosition().Z();
+
+    if (mCounterUsedTracks < 20) {
+      LOGF(info, "track %i h %d d %d l %d s %4d lMpos x %.2e y %.2e z %.2e gMpos x %.2e y %.2e z %.2e",
+           mCounterUsedTracks, mPointInfo.half, mPointInfo.disk, mPointInfo.layer, mPointInfo.sensor,
+           mPointInfo.measuredLocalX, mPointInfo.measuredLocalY, mPointInfo.measuredLocalZ,
+           mPointInfo.measuredGlobalX, mPointInfo.measuredGlobalY, mPointInfo.measuredGlobalZ);
+    }
+    mTree->Fill();
+  }
 }

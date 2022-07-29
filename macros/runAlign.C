@@ -27,7 +27,7 @@
 // .L ~/cernbox/alice/enigma/macros/runAlign.C++
 // runAlign()
 
-void runAlign(const Int_t fileStop = 4315,
+void runAlign(const Int_t fileStop = 1, // 4315,
               const bool preferAlignedFile = true)
 {
   ROOT::EnableImplicitMT(0);
@@ -50,8 +50,8 @@ void runAlign(const Int_t fileStop = 4315,
     std::cout << "Error: MFT dictionnary file " << dictFileName << " not found!" << std::endl;
     return;
   }
-  o2::itsmft::TopologyDictionary dict;
-  dict.readBinaryFile(dictFileName);
+  o2::itsmft::TopologyDictionary* dict = new o2::itsmft::TopologyDictionary();
+  dict->readBinaryFile(dictFileName);
 
   // cluster and track chains
 
@@ -65,8 +65,8 @@ void runAlign(const Int_t fileStop = 4315,
   generalPath += alignStatus;
 
   const Int_t fileStart = 1;
-  TChain mftclusterChain("o2sim");
-  TChain mfttrackChain("o2sim");
+  TChain* mftclusterChain = new TChain("o2sim");
+  TChain* mfttrackChain = new TChain("o2sim");
   for (Int_t ii = fileStart; ii <= fileStop; ii++) {
     std::stringstream ss;
     if (ii < 100) {
@@ -76,8 +76,8 @@ void runAlign(const Int_t fileStop = 4315,
       ss << generalPath << "/" << ii;
     }
     std::string filePath = ss.str();
-    mftclusterChain.Add(Form("%s/mftclusters.root", filePath.c_str()));
-    mfttrackChain.Add(Form("%s/mfttracks.root", filePath.c_str()));
+    mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+    mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
   }
   std::cout << "Number of files per chain = " << fileStop << std::endl;
 
@@ -85,8 +85,7 @@ void runAlign(const Int_t fileStop = 4315,
 
   AlignHelper aligner;
 
-  aligner.setGeometry(geom);
-  aligner.setClusterDictionary(&dict);
+  aligner.setClusterDictionary(dict);
 
   AlignHelper::AlignConfig alignConfigParam;
   aligner.setChi2CutNStdDev(alignConfigParam.chi2CutNStdDev);
@@ -97,20 +96,22 @@ void runAlign(const Int_t fileStop = 4315,
   aligner.setAllowedVariationDeltaZ(alignConfigParam.allowedVarDeltaZ);
   aligner.setAllowedVariationDeltaRz(alignConfigParam.allowedVarDeltaRz);
   aligner.setMinNumberClusterCut(alignConfigParam.minPoints);
+  aligner.setChi2CutFactor(alignConfigParam.chi2CutFactor);
 
   // TODO: fix det. elements here
 
   // init Millipede
   aligner.init();
 
+  // tree to record local measurements and residuals
+  aligner.initTree();
+
   // compute Mille records
 
-  TChain* mfttrackChainP = &mfttrackChain;
-  TChain* mftclusterChainP = &mftclusterChain;
-  int nRof = aligner.connectToTChains(mfttrackChainP, mftclusterChainP);
+  int nRof = aligner.connectToTChains(mfttrackChain, mftclusterChain);
   for (int irof = 0; irof < nRof; irof++) { // loop on ROFs
-    mftclusterChain.GetEntry(irof);
-    mfttrackChain.GetEntry(irof);
+    mftclusterChain->GetEntry(irof);
+    mfttrackChain->GetEntry(irof);
     aligner.processROF();
     aligner.processRecoTracks();
   }
@@ -118,16 +119,19 @@ void runAlign(const Int_t fileStop = 4315,
 
   // compute alignment parameters
 
-  aligner.globalFit();
+  // aligner.globalFit();
 
   // save alignment parameters to file
 
   std::vector<o2::detectors::AlignParam> alignParams;
   aligner.getAlignParams(alignParams);
-  LOG(info) << "Storing MFT alignment params in local file mft_alignment.root";
+  LOGF(info, "Storing MFT alignment params in local file %s/mft_alignment.root", generalPath.c_str());
   TFile afile(Form("%s/mft_alignment.root", generalPath.c_str()), "recreate", "", 505);
   afile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
   afile.Close();
+
+  // save tree with to record local measurements and residuals and close related file
+  aligner.closeTree();
 
   // the end
 
