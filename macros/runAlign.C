@@ -112,7 +112,8 @@ void runAlign(const Int_t fileStop = 1, // 4315,
   for (int irof = 0; irof < nRof; irof++) { // loop on ROFs
     mftclusterChain->GetEntry(irof);
     mfttrackChain->GetEntry(irof);
-    aligner.processROF();
+    if (irof == 0)
+      aligner.processROF();
     aligner.processRecoTracks();
   }
   aligner.printProcessTrackSummary();
