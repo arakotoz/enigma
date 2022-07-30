@@ -759,31 +759,34 @@ bool AlignHelper::setLocalEquationZ()
 //__________________________________________________________________________
 void AlignHelper::initControlTree()
 {
-  mControlFile = TFile::Open("align_point.root", "recreate", "", 505);
+  if (mControlFile == nullptr)
+    mControlFile = TFile::Open("align_point.root", "recreate", "", 505);
 
-  mControlTree = new TTree("point", "the align point info tree");
-  mControlTree->Branch("sensor", &mPointInfo.sensor, "sensor/s");
-  mControlTree->Branch("layer", &mPointInfo.layer, "layer/s");
-  mControlTree->Branch("disk", &mPointInfo.disk, "disk/s");
-  mControlTree->Branch("half", &mPointInfo.half, "half/s");
-  mControlTree->Branch("measuredGlobalX", &mPointInfo.measuredGlobalX, "measuredGlobalX/D");
-  mControlTree->Branch("measuredGlobalY", &mPointInfo.measuredGlobalY, "measuredGlobalY/D");
-  mControlTree->Branch("measuredGlobalZ", &mPointInfo.measuredGlobalZ, "measuredGlobalZ/D");
-  mControlTree->Branch("measuredLocalX", &mPointInfo.measuredLocalX, "measuredLocalX/D");
-  mControlTree->Branch("measuredLocalY", &mPointInfo.measuredLocalY, "measuredLocalY/D");
-  mControlTree->Branch("measuredLocalZ", &mPointInfo.measuredLocalZ, "measuredLocalZ/D");
-  mControlTree->Branch("residualX", &mPointInfo.residualX, "residualX/D");
-  mControlTree->Branch("residualY", &mPointInfo.residualY, "residualY/D");
-  mControlTree->Branch("residualZ", &mPointInfo.residualZ, "residualZ/D");
-  mControlTree->Branch("residualLocalX", &mPointInfo.residualLocalX, "residualLocalX/D");
-  mControlTree->Branch("residualLocalY", &mPointInfo.residualLocalY, "residualLocalY/D");
-  mControlTree->Branch("residualLocalZ", &mPointInfo.residualLocalZ, "residualLocalZ/D");
-  mControlTree->Branch("recoGlobalX", &mPointInfo.recoGlobalX, "recoGlobalX/D");
-  mControlTree->Branch("recoGlobalY", &mPointInfo.recoGlobalY, "recoGlobalY/D");
-  mControlTree->Branch("recoGlobalZ", &mPointInfo.recoGlobalZ, "recoGlobalZ/D");
-  mControlTree->Branch("recoLocalX", &mPointInfo.recoLocalX, "recoLocalX/D");
-  mControlTree->Branch("recoLocalY", &mPointInfo.recoLocalY, "recoLocalY/D");
-  mControlTree->Branch("recoLocalZ", &mPointInfo.recoLocalZ, "recoLocalZ/D");
+  if (mControlTree == nullptr) {
+    mControlTree = new TTree("point", "the align point info tree");
+    mControlTree->Branch("sensor", &mPointInfo.sensor, "sensor/s");
+    mControlTree->Branch("layer", &mPointInfo.layer, "layer/s");
+    mControlTree->Branch("disk", &mPointInfo.disk, "disk/s");
+    mControlTree->Branch("half", &mPointInfo.half, "half/s");
+    mControlTree->Branch("measuredGlobalX", &mPointInfo.measuredGlobalX, "measuredGlobalX/D");
+    mControlTree->Branch("measuredGlobalY", &mPointInfo.measuredGlobalY, "measuredGlobalY/D");
+    mControlTree->Branch("measuredGlobalZ", &mPointInfo.measuredGlobalZ, "measuredGlobalZ/D");
+    mControlTree->Branch("measuredLocalX", &mPointInfo.measuredLocalX, "measuredLocalX/D");
+    mControlTree->Branch("measuredLocalY", &mPointInfo.measuredLocalY, "measuredLocalY/D");
+    mControlTree->Branch("measuredLocalZ", &mPointInfo.measuredLocalZ, "measuredLocalZ/D");
+    mControlTree->Branch("residualX", &mPointInfo.residualX, "residualX/D");
+    mControlTree->Branch("residualY", &mPointInfo.residualY, "residualY/D");
+    mControlTree->Branch("residualZ", &mPointInfo.residualZ, "residualZ/D");
+    mControlTree->Branch("residualLocalX", &mPointInfo.residualLocalX, "residualLocalX/D");
+    mControlTree->Branch("residualLocalY", &mPointInfo.residualLocalY, "residualLocalY/D");
+    mControlTree->Branch("residualLocalZ", &mPointInfo.residualLocalZ, "residualLocalZ/D");
+    mControlTree->Branch("recoGlobalX", &mPointInfo.recoGlobalX, "recoGlobalX/D");
+    mControlTree->Branch("recoGlobalY", &mPointInfo.recoGlobalY, "recoGlobalY/D");
+    mControlTree->Branch("recoGlobalZ", &mPointInfo.recoGlobalZ, "recoGlobalZ/D");
+    mControlTree->Branch("recoLocalX", &mPointInfo.recoLocalX, "recoLocalX/D");
+    mControlTree->Branch("recoLocalY", &mPointInfo.recoLocalY, "recoLocalY/D");
+    mControlTree->Branch("recoLocalZ", &mPointInfo.recoLocalZ, "recoLocalZ/D");
+  }
 }
 
 //__________________________________________________________________________
