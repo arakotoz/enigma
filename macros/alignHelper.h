@@ -300,6 +300,7 @@ void AlignHelper::init()
     mMillepede->SetIterations(mStartFac);
   }
 
+  // init tree to record local measurements and residuals
   initControlTree();
 
   LOGF(info, "AlignHelper init done");
@@ -344,6 +345,7 @@ void AlignHelper::processROFs(TChain* mfttrackChain, TChain* mftclusterChain)
     mNumberOfClusterChainROFs += (*mMFTClustersROF).size();
     assert(mNumberOfTrackChainROFs == mNumberOfClusterChainROFs);
 
+    //______________________________________________________
     for (const auto& oneTrack : *mMFTTracks) { // track loop
 
       // Skip the track if not enough clusters

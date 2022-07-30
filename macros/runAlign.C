@@ -103,11 +103,7 @@ void runAlign(const Int_t fileStop = 1, // 4315,
   // init Millipede
   aligner.init();
 
-  // tree to record local measurements and residuals
-  aligner.initControlTree();
-
   // compute Mille records
-
   aligner.processROFs(mfttrackChain, mftclusterChain);
   aligner.printProcessTrackSummary();
 
