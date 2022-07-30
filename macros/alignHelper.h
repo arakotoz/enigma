@@ -729,7 +729,7 @@ bool AlignHelper::setLocalEquationZ()
 
   if (success) {
     bool debugPrint = false;
-    if (mCounterUsedTracks) {
+    if (mCounterUsedTracks < 5) {
       LOGF(info,
            "setLocalEquationZ(): track %i sr %4d local %.3e %.3e %.3e %.3e, global %.3e %.3e %.3e %.3e Z %.3e sigma %.3e",
            mCounterUsedTracks, chipId,
