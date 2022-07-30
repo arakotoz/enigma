@@ -28,7 +28,8 @@
 // runAlign()
 
 void runAlign(const Int_t fileStop = 1, // 4315,
-              const bool preferAlignedFile = true)
+              const bool preferAlignedFile = true,
+              const bool doControl = true)
 {
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
@@ -97,6 +98,7 @@ void runAlign(const Int_t fileStop = 1, // 4315,
   aligner.setAllowedVariationDeltaRz(alignConfigParam.allowedVarDeltaRz);
   aligner.setMinNumberClusterCut(alignConfigParam.minPoints);
   aligner.setChi2CutFactor(alignConfigParam.chi2CutFactor);
+  aligner.setWithControl(doControl);
 
   // TODO: fix det. elements here
 
@@ -119,9 +121,6 @@ void runAlign(const Int_t fileStop = 1, // 4315,
   TFile afile(Form("%s/mft_alignment.root", generalPath.c_str()), "recreate", "", 505);
   afile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
   afile.Close();
-
-  // save tree with to record local measurements and residuals and close related file
-  aligner.closeControlTree();
 
   // the end
 

@@ -93,6 +93,7 @@ class AlignHelper
   void setAllowedVariationDeltaZ(const double value) { mAllowVar[3] = value; }
   void setAllowedVariationDeltaRz(const double value) { mAllowVar[2] = value; }
   void setChi2CutFactor(const double value) { mStartFac = value; }
+  void setWithControl(const bool choice) { mWithControl = choice; }
 
   /// \brief  access mft tracks and clusters in the ROOT files, process all ROFs
   void processROFs(TChain* mfttrackChain, TChain* mftclusterChain);
@@ -108,9 +109,6 @@ class AlignHelper
 
   /// \brief provide access to the AlignParam vector
   void getAlignParams(std::vector<o2::detectors::AlignParam>& alignParams) { alignParams = mAlignParams; }
-
-  void initControlTree();
-  void closeControlTree();
 
  protected:
   int mRunNumber = 0;                                                            ///< run number
@@ -143,17 +141,19 @@ class AlignHelper
   std::vector<o2::detectors::AlignParam> mAlignParams;                           ///< vector of alignment parameters computed by Millepede global fit
   bool mIsInitDone = false;                                                      ///< boolean to follow the initialisation status
   int* mGlobalParameterStatus = nullptr;                                         ///< Array of effective degrees of freedom, used to fix detectors, parameters, etc.
+  bool mWithControl = false;                                                     ///< boolean to set the use of the control tree
 
   // used to fix some degrees of freedom
 
   static constexpr Int_t mFixedParId = -1;
   static constexpr Int_t mFreeParId = mFixedParId - 1;
 
-  TFile* mFile;
-  TTree* mTree;
+  TFile* mControlFile = nullptr;
+  TTree* mControlTree = nullptr;
   AlignPoint mPointInfo;
-
-  void fillTree();
+  void initControlTree();
+  void closeControlTree();
+  void fillControlTree();
 
   /// \brief set array of local derivatives
   bool setLocalDerivative(int index, double value);
@@ -200,8 +200,9 @@ AlignHelper::AlignHelper()
     mMilleConstraintsRecFileName("mft_mille_constraints.root"),
     mIsInitDone(false),
     mGlobalParameterStatus(nullptr),
-    mFile(nullptr),
-    mTree(nullptr)
+    mWithControl(false),
+    mControlFile(nullptr),
+    mControlTree(nullptr)
 {
   // default allowed variations w.r.t. global system coordinates
   mAllowVar[0] = 0.5;  // delta translation in x (cm)
@@ -251,6 +252,8 @@ AlignHelper::~AlignHelper()
   free(mGlobalDerivatives);
   delete[] mLocalDerivatives;
   free(mGlobalParameterStatus);
+  if (mWithControl)
+    closeControlTree();
 }
 
 //__________________________________________________________________________
@@ -301,7 +304,8 @@ void AlignHelper::init()
   }
 
   // init tree to record local measurements and residuals
-  initControlTree();
+  if (mWithControl)
+    initControlTree();
 
   LOGF(info, "AlignHelper init done");
   mIsInitDone = true;
@@ -393,7 +397,8 @@ void AlignHelper::processROFs(TChain* mfttrackChain, TChain* mftclusterChain)
         // compute residuals
         mAlignPoint->setLocalResidual();
         mAlignPoint->setGlobalResidual();
-        fillTree();
+        if (mWithControl)
+          fillControlTree();
 
         // Compute derivatives
         mAlignPoint->computeLocalDerivatives();
@@ -501,53 +506,6 @@ void AlignHelper::printProcessTrackSummary()
        "n ROFs = %d, used tracks = %d, skipped tracks = %d, local equations failed = %d",
        mNumberOfTrackChainROFs, mCounterUsedTracks,
        mCounterSkippedTracks, mCounterLocalEquationFailed);
-}
-
-//__________________________________________________________________________
-void AlignHelper::initControlTree()
-{
-  mFile = TFile::Open("align_point.root", "recreate", "", 505);
-
-  mTree = new TTree("point", "the align point info tree");
-  mTree->Branch("sensor", &mPointInfo.sensor, "sensor/s");
-  mTree->Branch("layer", &mPointInfo.layer, "layer/s");
-  mTree->Branch("disk", &mPointInfo.disk, "disk/s");
-  mTree->Branch("half", &mPointInfo.half, "half/s");
-  mTree->Branch("measuredGlobalX", &mPointInfo.measuredGlobalX, "measuredGlobalX/D");
-  mTree->Branch("measuredGlobalY", &mPointInfo.measuredGlobalY, "measuredGlobalY/D");
-  mTree->Branch("measuredGlobalZ", &mPointInfo.measuredGlobalZ, "measuredGlobalZ/D");
-  mTree->Branch("measuredLocalX", &mPointInfo.measuredLocalX, "measuredLocalX/D");
-  mTree->Branch("measuredLocalY", &mPointInfo.measuredLocalY, "measuredLocalY/D");
-  mTree->Branch("measuredLocalZ", &mPointInfo.measuredLocalZ, "measuredLocalZ/D");
-  mTree->Branch("residualX", &mPointInfo.residualX, "residualX/D");
-  mTree->Branch("residualY", &mPointInfo.residualY, "residualY/D");
-  mTree->Branch("residualZ", &mPointInfo.residualZ, "residualZ/D");
-  mTree->Branch("residualLocalX", &mPointInfo.residualLocalX, "residualLocalX/D");
-  mTree->Branch("residualLocalY", &mPointInfo.residualLocalY, "residualLocalY/D");
-  mTree->Branch("residualLocalZ", &mPointInfo.residualLocalZ, "residualLocalZ/D");
-  mTree->Branch("recoGlobalX", &mPointInfo.recoGlobalX, "recoGlobalX/D");
-  mTree->Branch("recoGlobalY", &mPointInfo.recoGlobalY, "recoGlobalY/D");
-  mTree->Branch("recoGlobalZ", &mPointInfo.recoGlobalZ, "recoGlobalZ/D");
-  mTree->Branch("recoLocalX", &mPointInfo.recoLocalX, "recoLocalX/D");
-  mTree->Branch("recoLocalY", &mPointInfo.recoLocalY, "recoLocalY/D");
-  mTree->Branch("recoLocalZ", &mPointInfo.recoLocalZ, "recoLocalZ/D");
-}
-
-//__________________________________________________________________________
-void AlignHelper::closeControlTree()
-{
-  if (mTree) {
-    if (mFile && mFile->IsWritable()) {
-      mFile->cd();
-      mTree->Write();
-    }
-    delete mTree;
-    if (mFile) {
-      mFile->Close();
-      delete mFile;
-    }
-  }
-  LOG(info) << "Closed file align_point.root";
 }
 
 //__________________________________________________________________________
@@ -799,9 +757,56 @@ bool AlignHelper::setLocalEquationZ()
 }
 
 //__________________________________________________________________________
-void AlignHelper::fillTree()
+void AlignHelper::initControlTree()
 {
-  if (mTree) {
+  mControlFile = TFile::Open("align_point.root", "recreate", "", 505);
+
+  mControlTree = new TTree("point", "the align point info tree");
+  mControlTree->Branch("sensor", &mPointInfo.sensor, "sensor/s");
+  mControlTree->Branch("layer", &mPointInfo.layer, "layer/s");
+  mControlTree->Branch("disk", &mPointInfo.disk, "disk/s");
+  mControlTree->Branch("half", &mPointInfo.half, "half/s");
+  mControlTree->Branch("measuredGlobalX", &mPointInfo.measuredGlobalX, "measuredGlobalX/D");
+  mControlTree->Branch("measuredGlobalY", &mPointInfo.measuredGlobalY, "measuredGlobalY/D");
+  mControlTree->Branch("measuredGlobalZ", &mPointInfo.measuredGlobalZ, "measuredGlobalZ/D");
+  mControlTree->Branch("measuredLocalX", &mPointInfo.measuredLocalX, "measuredLocalX/D");
+  mControlTree->Branch("measuredLocalY", &mPointInfo.measuredLocalY, "measuredLocalY/D");
+  mControlTree->Branch("measuredLocalZ", &mPointInfo.measuredLocalZ, "measuredLocalZ/D");
+  mControlTree->Branch("residualX", &mPointInfo.residualX, "residualX/D");
+  mControlTree->Branch("residualY", &mPointInfo.residualY, "residualY/D");
+  mControlTree->Branch("residualZ", &mPointInfo.residualZ, "residualZ/D");
+  mControlTree->Branch("residualLocalX", &mPointInfo.residualLocalX, "residualLocalX/D");
+  mControlTree->Branch("residualLocalY", &mPointInfo.residualLocalY, "residualLocalY/D");
+  mControlTree->Branch("residualLocalZ", &mPointInfo.residualLocalZ, "residualLocalZ/D");
+  mControlTree->Branch("recoGlobalX", &mPointInfo.recoGlobalX, "recoGlobalX/D");
+  mControlTree->Branch("recoGlobalY", &mPointInfo.recoGlobalY, "recoGlobalY/D");
+  mControlTree->Branch("recoGlobalZ", &mPointInfo.recoGlobalZ, "recoGlobalZ/D");
+  mControlTree->Branch("recoLocalX", &mPointInfo.recoLocalX, "recoLocalX/D");
+  mControlTree->Branch("recoLocalY", &mPointInfo.recoLocalY, "recoLocalY/D");
+  mControlTree->Branch("recoLocalZ", &mPointInfo.recoLocalZ, "recoLocalZ/D");
+}
+
+//__________________________________________________________________________
+void AlignHelper::closeControlTree()
+{
+  if (mControlTree) {
+    if (mControlFile && mControlFile->IsWritable()) {
+      mControlFile->cd();
+      mControlTree->Write();
+    }
+    delete mControlTree;
+    if (mControlFile) {
+      mControlFile->Close();
+      delete mControlFile;
+    }
+  }
+  LOG(info) << "Closed file align_point.root";
+}
+
+//__________________________________________________________________________
+void AlignHelper::fillControlTree()
+{
+  if (mControlTree) {
     mPointInfo.sensor = mAlignPoint->getSensorId();
     mPointInfo.layer = mAlignPoint->layer();
     mPointInfo.disk = mAlignPoint->disk();
@@ -831,6 +836,6 @@ void AlignHelper::fillTree()
            mPointInfo.measuredLocalX, mPointInfo.measuredLocalY, mPointInfo.measuredLocalZ,
            mPointInfo.measuredGlobalX, mPointInfo.measuredGlobalY, mPointInfo.measuredGlobalZ);
     }
-    mTree->Fill();
+    mControlTree->Fill();
   }
 }
