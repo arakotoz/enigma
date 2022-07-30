@@ -27,12 +27,16 @@
 // .L ~/cernbox/alice/enigma/macros/runAlign.C++
 // runAlign()
 
-void runAlign(const Int_t fileStop = 1, // 4315,
+void runAlign(const Int_t fileStop = 1,           // 4315,
+              const double chi2CutFactor = 65536, // 256
               const bool preferAlignedFile = true,
               const bool doControl = true)
 {
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
+  AlignHelper::AlignConfig alignConfigParam;
+  alignConfigParam.chi2CutFactor = chi2CutFactor;
 
   // geometry
 
@@ -88,7 +92,6 @@ void runAlign(const Int_t fileStop = 1, // 4315,
 
   aligner.setClusterDictionary(dict);
 
-  AlignHelper::AlignConfig alignConfigParam;
   aligner.setChi2CutNStdDev(alignConfigParam.chi2CutNStdDev);
   aligner.setResidualCutInitial(alignConfigParam.residualCutInitial);
   aligner.setResidualCut(alignConfigParam.residualCut);
@@ -111,7 +114,7 @@ void runAlign(const Int_t fileStop = 1, // 4315,
 
   // compute alignment parameters
 
-  // aligner.globalFit();
+  aligner.globalFit();
 
   // save alignment parameters to file
 
