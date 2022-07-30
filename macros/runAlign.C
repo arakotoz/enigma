@@ -104,18 +104,11 @@ void runAlign(const Int_t fileStop = 1, // 4315,
   aligner.init();
 
   // tree to record local measurements and residuals
-  aligner.initTree();
+  aligner.initControlTree();
 
   // compute Mille records
 
-  int nRof = aligner.connectToTChains(mfttrackChain, mftclusterChain);
-  for (int irof = 0; irof < nRof; irof++) { // loop on ROFs
-    mftclusterChain->GetEntry(irof);
-    mfttrackChain->GetEntry(irof);
-    if (irof == 0)
-      aligner.processROF();
-    aligner.processRecoTracks();
-  }
+  aligner.processROFs(mfttrackChain, mftclusterChain);
   aligner.printProcessTrackSummary();
 
   // compute alignment parameters
@@ -132,7 +125,7 @@ void runAlign(const Int_t fileStop = 1, // 4315,
   afile.Close();
 
   // save tree with to record local measurements and residuals and close related file
-  aligner.closeTree();
+  aligner.closeControlTree();
 
   // the end
 

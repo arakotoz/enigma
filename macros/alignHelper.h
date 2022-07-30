@@ -7,6 +7,8 @@
 #include <Rtypes.h>
 #include <TString.h>
 #include <TChain.h>
+#include <TTreeReader.h>
+#include <TTreeReaderValue.h>
 
 #include "DataFormatsITSMFT/TopologyDictionary.h"
 #include "DataFormatsMFT/TrackMFT.h"
@@ -92,14 +94,11 @@ class AlignHelper
   void setAllowedVariationDeltaRz(const double value) { mAllowVar[2] = value; }
   void setChi2CutFactor(const double value) { mStartFac = value; }
 
-  /// \brief access mft tracks and clusters in the ROOT files, return total number of ROFs
-  int connectToTChains(TChain* mfttrackChain, TChain* mftclusterChain);
-
-  /// \brief process a given ROF
-  void processROF();
+  /// \brief  access mft tracks and clusters in the ROOT files, process all ROFs
+  void processROFs(TChain* mfttrackChain, TChain* mftclusterChain);
 
   /// \brief use valid tracks to build Mille records
-  void processRecoTracks();
+  // void processRecoTracks();
 
   /// \brief perform the simultaneous fit of track and alignement parameters
   void globalFit();
@@ -110,8 +109,8 @@ class AlignHelper
   /// \brief provide access to the AlignParam vector
   void getAlignParams(std::vector<o2::detectors::AlignParam>& alignParams) { alignParams = mAlignParams; }
 
-  void initTree();
-  void closeTree();
+  void initControlTree();
+  void closeControlTree();
 
  protected:
   int mRunNumber = 0;                                                            ///< run number
@@ -149,16 +148,6 @@ class AlignHelper
 
   static constexpr Int_t mFixedParId = -1;
   static constexpr Int_t mFreeParId = mFixedParId - 1;
-
-  // access these data from mfttracks.root and mftclusters.root
-
-  std::vector<o2::mft::TrackMFT> mMFTTracks, *mMFTTracksVecP = &mMFTTracks;
-  std::vector<o2::itsmft::ROFRecord> mMFTTracksROF, *mMFTTracksROFVecP = &mMFTTracksROF;
-  std::vector<int> mMFTTrackClusIdx, *mMFTTrackClusIdxVecP = &mMFTTrackClusIdx;
-  std::vector<o2::itsmft::CompClusterExt> mMFTClusters, *mMFTClustersVecP = &mMFTClusters;
-  std::vector<o2::itsmft::ROFRecord> mMFTClustersROF, *mMFTClustersROFVecP = &mMFTClustersROF;
-  std::vector<unsigned char> mMFTClusterPatterns, *mMFTClusterPatternsVecP = &mMFTClusterPatterns;
-  std::vector<unsigned char>::iterator pattIt;
 
   TFile* mFile;
   TTree* mTree;
@@ -311,118 +300,127 @@ void AlignHelper::init()
     mMillepede->SetIterations(mStartFac);
   }
 
-  initTree();
+  initControlTree();
 
   LOGF(info, "AlignHelper init done");
   mIsInitDone = true;
 }
 
 //__________________________________________________________________________
-int AlignHelper::connectToTChains(TChain* mfttrackChain, TChain* mftclusterChain)
-{
-  // get tracks
-  mfttrackChain->SetBranchAddress("MFTTrack", &mMFTTracksVecP);
-  mfttrackChain->SetBranchAddress("MFTTracksROF", &mMFTTracksROFVecP);
-  mfttrackChain->SetBranchAddress("MFTTrackClusIdx", &mMFTTrackClusIdxVecP);
-  mNumberOfTrackChainROFs = mfttrackChain->GetEntries();
-  LOG(info) << "Number of track chain entries = " << mNumberOfTrackChainROFs;
-
-  // get clusters
-  mftclusterChain->SetBranchAddress("MFTClusterComp", &mMFTClustersVecP);
-  mftclusterChain->SetBranchAddress("MFTClustersROF", &mMFTClustersROFVecP);
-  mftclusterChain->SetBranchAddress("MFTClusterPatt", &mMFTClusterPatternsVecP);
-  mNumberOfClusterChainROFs = mftclusterChain->GetEntries();
-  LOG(info) << "Number of cluster chain entries = " << mNumberOfClusterChainROFs;
-
-  assert(mNumberOfTrackChainROFs == mNumberOfClusterChainROFs);
-  return mNumberOfTrackChainROFs;
-}
-
-//__________________________________________________________________________
-void AlignHelper::processROF()
-{
-  pattIt = mMFTClusterPatterns.begin();
-}
-
-//__________________________________________________________________________
-void AlignHelper::processRecoTracks()
+void AlignHelper::processROFs(TChain* mfttrackChain, TChain* mftclusterChain)
 {
   if (!mIsInitDone) {
-    LOGF(fatal, "AlignHelper::processRecoTracks() aborted because init was not done!");
+    LOGF(fatal, "AlignHelper::processROFs() aborted because init was not done!");
     return;
   }
 
-  for (const auto& oneTrack : mMFTTracks) { // track loop
+  LOG(info) << "AlignHelper::processROFs() - start";
 
-    // Skip the track if not enough clusters
-    auto ncls = oneTrack.getNumberOfPoints();
-    if (ncls < mMinNumberClusterCut) {
-      mCounterSkippedTracks++;
-      continue;
-    }
+  TTreeReader mftTrackChainReader(mfttrackChain);
+  TTreeReader mftClusterChainReader(mftclusterChain);
+  std::vector<unsigned char>::iterator pattIt;
 
-    // Skip presumably quite low momentum track
-    if (!oneTrack.isLTF()) {
-      mCounterSkippedTracks++;
-      continue;
-    }
+  TTreeReaderValue<std::vector<o2::mft::TrackMFT>> mMFTTracks =
+    {mftTrackChainReader, "MFTTrack"};
+  TTreeReaderValue<std::vector<o2::itsmft::ROFRecord>> mMFTTracksROF =
+    {mftTrackChainReader, "MFTTracksROF"};
+  TTreeReaderValue<std::vector<int>> mMFTTrackClusIdx =
+    {mftTrackChainReader, "MFTTrackClusIdx"};
 
-    auto offset = oneTrack.getExternalClusterIndexOffset();
+  TTreeReaderValue<std::vector<o2::itsmft::CompClusterExt>> mMFTClusters =
+    {mftClusterChainReader, "MFTClusterComp"};
+  TTreeReaderValue<std::vector<o2::itsmft::ROFRecord>> mMFTClustersROF =
+    {mftClusterChainReader, "MFTClustersROF"};
+  TTreeReaderValue<std::vector<unsigned char>> mMFTClusterPatterns =
+    {mftClusterChainReader, "MFTClusterPatt"};
 
-    mTrackRecord.Reset();
-    if (mMillepede->GetRecord()) {
-      mMillepede->GetRecord()->Reset();
-    }
+  bool firstEntry = true;
+  while (mftTrackChainReader.Next() && mftClusterChainReader.Next()) {
 
-    // Store the initial track parameters
-    mAlignPoint->resetTrackInitialParam();
-    mAlignPoint->recordTrackInitialParam(oneTrack);
+    if (firstEntry)
+      pattIt = (*mMFTClusterPatterns).begin();
 
-    bool isTrackUsed = true;
+    mNumberOfTrackChainROFs += (*mMFTTracksROF).size();
+    mNumberOfClusterChainROFs += (*mMFTClustersROF).size();
+    assert(mNumberOfTrackChainROFs == mNumberOfClusterChainROFs);
 
-    for (int icls = 0; icls < ncls; ++icls) { // cluster loop
+    for (const auto& oneTrack : *mMFTTracks) { // track loop
 
-      mAlignPoint->resetAlignPoint();
+      // Skip the track if not enough clusters
+      auto ncls = oneTrack.getNumberOfPoints();
+      if (ncls < mMinNumberClusterCut) {
+        mCounterSkippedTracks++;
+        continue;
+      }
 
-      // Store measured positions
-      auto clsEntry = mMFTTrackClusIdx[offset + icls];
-      const auto compCluster = mMFTClusters[clsEntry];
-      mAlignPoint->setMeasuredPosition(compCluster, pattIt);
+      // Skip presumably quite low momentum track
+      if (!oneTrack.isLTF()) {
+        mCounterSkippedTracks++;
+        continue;
+      }
 
-      // Propagate track to the current z plane of this cluster
-      auto track = oneTrack;
-      track.propagateParamToZlinear(mAlignPoint->getGlobalMeasuredPosition().Z());
+      auto offset = oneTrack.getExternalClusterIndexOffset();
 
-      // Store reco positions
-      mAlignPoint->setGlobalRecoPosition(track);
+      mTrackRecord.Reset();
+      if (mMillepede->GetRecord()) {
+        mMillepede->GetRecord()->Reset();
+      }
 
-      // compute residuals
-      mAlignPoint->setLocalResidual();
-      mAlignPoint->setGlobalResidual();
-      fillTree();
+      // Store the initial track parameters
+      mAlignPoint->resetTrackInitialParam();
+      mAlignPoint->recordTrackInitialParam(oneTrack);
 
-      // Compute derivatives
-      mAlignPoint->computeLocalDerivatives();
-      mAlignPoint->computeGlobalDerivatives();
+      bool isTrackUsed = true;
 
-      // Set local equations
-      bool success = true;
-      success &= setLocalEquationX();
-      success &= setLocalEquationY();
-      success &= setLocalEquationZ();
-      isTrackUsed &= success;
+      for (int icls = 0; icls < ncls; ++icls) { // cluster loop
 
-    } // end of loop on clusters
+        mAlignPoint->resetAlignPoint();
 
-    if (isTrackUsed) {
-      // copy track record
-      mMillepede->SetRecordRun(mRunNumber);
-      mMillepede->SetRecordWeight(mWeightRecord);
-      mTrackRecord = *mMillepede->GetRecord();
-      mMillepede->SaveRecordData();
-      mCounterUsedTracks++;
-    }
-  } // end of loop on tracks
+        // Store measured positions
+        auto clsEntry = (*mMFTTrackClusIdx)[offset + icls];
+        const auto compCluster = (*mMFTClusters)[clsEntry];
+        mAlignPoint->setMeasuredPosition(compCluster, pattIt);
+
+        // Propagate track to the current z plane of this cluster
+        auto track = oneTrack;
+        track.propagateParamToZlinear(mAlignPoint->getGlobalMeasuredPosition().Z());
+
+        // Store reco positions
+        mAlignPoint->setGlobalRecoPosition(track);
+
+        // compute residuals
+        mAlignPoint->setLocalResidual();
+        mAlignPoint->setGlobalResidual();
+        fillTree();
+
+        // Compute derivatives
+        mAlignPoint->computeLocalDerivatives();
+        mAlignPoint->computeGlobalDerivatives();
+
+        // Set local equations
+        bool success = true;
+        success &= setLocalEquationX();
+        success &= setLocalEquationY();
+        success &= setLocalEquationZ();
+        isTrackUsed &= success;
+
+      } // end of loop on clusters
+
+      if (isTrackUsed) {
+        // copy track record
+        mMillepede->SetRecordRun(mRunNumber);
+        mMillepede->SetRecordWeight(mWeightRecord);
+        mTrackRecord = *mMillepede->GetRecord();
+        mMillepede->SaveRecordData();
+        mCounterUsedTracks++;
+      }
+    } // end of loop on tracks
+
+    firstEntry = false;
+
+  } // end of loop on TChain reader
+
+  LOG(info) << "AlignHelper::processROFs() - end";
 }
 
 //__________________________________________________________________________
@@ -504,7 +502,7 @@ void AlignHelper::printProcessTrackSummary()
 }
 
 //__________________________________________________________________________
-void AlignHelper::initTree()
+void AlignHelper::initControlTree()
 {
   mFile = TFile::Open("align_point.root", "recreate", "", 505);
 
@@ -534,7 +532,7 @@ void AlignHelper::initTree()
 }
 
 //__________________________________________________________________________
-void AlignHelper::closeTree()
+void AlignHelper::closeControlTree()
 {
   if (mTree) {
     if (mFile && mFile->IsWritable()) {
