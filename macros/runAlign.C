@@ -19,15 +19,27 @@
 #include "MFTBase/GeometryTGeo.h"
 #include "DetectorsCommonDataFormats/AlignParam.h"
 
-#include "alignHelper.h"
+#include "MFTAlignment/Alignment.h"
 
 #endif
+
+struct AlignConfigHelper {
+  int minPoints = 6;                ///< mininum number of clusters in a track used for alignment
+  int chi2CutNStdDev = 3;           ///< Number of standard deviations for chi2 cut
+  double residualCutInitial = 100.; ///< Cut on residual on first iteration
+  double residualCut = 100.;        ///< Cut on residual for other iterations
+  double allowedVarDeltaX = 0.5;    ///< allowed max delta in x-translation (cm)
+  double allowedVarDeltaY = 0.5;    ///< allowed max delta in y-translation (cm)
+  double allowedVarDeltaZ = 0.5;    ///< allowed max delta in z-translation (cm)
+  double allowedVarDeltaRz = 0.01;  ///< allowed max delta in rotation around z-axis (rad)
+  double chi2CutFactor = 256.;      ///< used to reject outliers i.e. bad tracks with sum(chi2) > Chi2DoFLim(fNStdDev, nDoF) * fChi2CutFactor
+};
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/runAlign.C++
 // runAlign()
 
-void runAlign(const Int_t fileStop = 1,           // 4315,
+void runAlign(const Int_t fileStop = 2,           // 4315,
               const double chi2CutFactor = 65536, // 256
               const bool preferAlignedFile = true,
               const bool doControl = true)
@@ -35,7 +47,7 @@ void runAlign(const Int_t fileStop = 1,           // 4315,
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
-  AlignHelper::AlignConfig alignConfigParam;
+  AlignConfigHelper alignConfigParam;
   alignConfigParam.chi2CutFactor = chi2CutFactor;
 
   // geometry
@@ -88,7 +100,7 @@ void runAlign(const Int_t fileStop = 1,           // 4315,
 
   // instantiate and configure the aligner
 
-  AlignHelper aligner;
+  o2::mft::Alignment aligner;
 
   aligner.setClusterDictionary(dict);
 
