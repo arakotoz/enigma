@@ -35,7 +35,7 @@ struct AlignConfigHelper {
   double chi2CutFactor = 256.;      ///< used to reject outliers i.e. bad tracks with sum(chi2) > Chi2DoFLim(fNStdDev, nDoF) * fChi2CutFactor
 };
 
-// root -l
+// alienv setenv O2Physics/latest -c root -l
 // .L ~/cernbox/alice/enigma/macros/runAlign.C++
 // runAlign()
 
