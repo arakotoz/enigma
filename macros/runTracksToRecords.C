@@ -10,8 +10,6 @@
 #include <TChain.h>
 
 #include "DataFormatsITSMFT/TopologyDictionary.h"
-#include "DataFormatsMFT/TrackMFT.h"
-#include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
 
@@ -66,35 +64,34 @@ void runTracksToRecords(const Int_t fileStop = 2, // 4315,
 
   // cluster and track chains
 
-  TChain* mftclusterChain = nullptr;
-  TChain* mfttrackChain = nullptr;
-  std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/";
+  const int runN = 505713;
+  std::string basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
   std::string alignStatus = "";
   if (preferAlignedFile || applyMisalignment) {
     alignStatus = "prealigned";
   } else {
     alignStatus = "idealgeo";
   }
-  generalPath += alignStatus;
+  std::stringstream generalPathSs;
+  generalPathSs << basePath << "/" << runN << "/" << alignStatus;
+  std::string generalPath = generalPathSs.str();
 
-  if (doWriteRecords) {
-    const Int_t fileStart = 1;
-    mftclusterChain = new TChain("o2sim");
-    mfttrackChain = new TChain("o2sim");
-    for (Int_t ii = fileStart; ii <= fileStop; ii++) {
-      std::stringstream ss;
-      if (ii < 100) {
-        ss << generalPath << "/"
-           << std::setw(3) << std::setfill('0') << ii;
-      } else {
-        ss << generalPath << "/" << ii;
-      }
-      std::string filePath = ss.str();
-      mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
-      mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
+  const Int_t fileStart = 1;
+  TChain* mftclusterChain = new TChain("o2sim");
+  TChain* mfttrackChain = new TChain("o2sim");
+  for (Int_t ii = fileStart; ii <= fileStop; ii++) {
+    std::stringstream ss;
+    if (ii < 100) {
+      ss << generalPath << "/"
+         << std::setw(3) << std::setfill('0') << ii;
+    } else {
+      ss << generalPath << "/" << ii;
     }
-    std::cout << "Number of files per chain = " << fileStop << std::endl;
+    std::string filePath = ss.str();
+    mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+    mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
   }
+  std::cout << "Number of files per chain = " << fileStop << std::endl;
 
   // instantiate and configure the aligner
 
@@ -102,6 +99,9 @@ void runTracksToRecords(const Int_t fileStop = 2, // 4315,
   alignConfigParam.minPoints = minPoints;
 
   o2::mft::TracksToRecords aligner;
+
+  aligner.setRunNumber(runN);
+  aligner.setBz(0.);
 
   aligner.setClusterDictionary(dict);
   aligner.setMinNumberClusterCut(alignConfigParam.minPoints);
@@ -112,9 +112,11 @@ void runTracksToRecords(const Int_t fileStop = 2, // 4315,
   // TODO: fix det. elements here
 
   // init Millipede
+
   aligner.init();
 
   // compute Mille records
+
   aligner.startRecordWriter();
   aligner.processROFs(mfttrackChain, mftclusterChain);
   aligner.printProcessTrackSummary();
@@ -128,4 +130,8 @@ void runTracksToRecords(const Int_t fileStop = 2, // 4315,
   std::cout << "Total Execution time: \t\t"
             << std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time).count()
             << " seconds" << endl;
+
+  delete mfttrackChain;
+  delete mftclusterChain;
+  delete dict;
 }
