@@ -1,0 +1,131 @@
+#if !defined(__CLING__) || defined(__ROOTCLING__)
+
+#include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <string>
+
+#include <Rtypes.h>
+#include <ROOT/RDataFrame.hxx>
+#include <TChain.h>
+
+#include "DataFormatsITSMFT/TopologyDictionary.h"
+#include "DataFormatsMFT/TrackMFT.h"
+#include "ITSMFTReconstruction/ChipMappingMFT.h"
+#include "MFTBase/Geometry.h"
+#include "MFTBase/GeometryTGeo.h"
+
+#include "MFTAlignment/TracksToRecords.h"
+
+#endif
+
+struct AlignConfigHelper {
+  int minPoints = 6;                ///< mininum number of clusters in a track used for alignment
+  int chi2CutNStdDev = 3;           ///< Number of standard deviations for chi2 cut
+  double residualCutInitial = 100.; ///< Cut on residual on first iteration
+  double residualCut = 100.;        ///< Cut on residual for other iterations
+  double allowedVarDeltaX = 0.5;    ///< allowed max delta in x-translation (cm)
+  double allowedVarDeltaY = 0.5;    ///< allowed max delta in y-translation (cm)
+  double allowedVarDeltaZ = 0.5;    ///< allowed max delta in z-translation (cm)
+  double allowedVarDeltaRz = 0.01;  ///< allowed max delta in rotation around z-axis (rad)
+  double chi2CutFactor = 256.;      ///< used to reject outliers i.e. bad tracks with sum(chi2) > Chi2DoFLim(fNStdDev, nDoF) * fChi2CutFactor
+};
+
+// alienv setenv O2Physics/latest -c root -l
+// .L ~/cernbox/alice/enigma/macros/runTracksToRecords.C++
+// runTracksToRecords()
+
+void runTracksToRecords(const Int_t fileStop = 2, // 4315,
+                        const int minPoints = 6,
+                        const bool preferAlignedFile = true,
+                        const bool doControl = true,
+                        const int nEntriesAutoSave = 500)
+{
+  ROOT::EnableImplicitMT(0);
+  std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
+  // geometry
+
+  const bool applyMisalignment = false;
+  o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
+  o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();
+  geom->fillMatrixCache(
+    o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L,
+                             o2::math_utils::TransformType::L2G));
+
+  // dictionary
+
+  std::string dictFileName = "MFTdictionary.bin";
+  std::ifstream dictFile(dictFileName.c_str());
+  if (!dictFile.good()) {
+    std::cout << "Error: MFT dictionnary file " << dictFileName << " not found!" << std::endl;
+    return;
+  }
+  o2::itsmft::TopologyDictionary* dict = new o2::itsmft::TopologyDictionary();
+  dict->readBinaryFile(dictFileName);
+
+  // cluster and track chains
+
+  TChain* mftclusterChain = nullptr;
+  TChain* mfttrackChain = nullptr;
+  std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/";
+  std::string alignStatus = "";
+  if (preferAlignedFile || applyMisalignment) {
+    alignStatus = "prealigned";
+  } else {
+    alignStatus = "idealgeo";
+  }
+  generalPath += alignStatus;
+
+  if (doWriteRecords) {
+    const Int_t fileStart = 1;
+    mftclusterChain = new TChain("o2sim");
+    mfttrackChain = new TChain("o2sim");
+    for (Int_t ii = fileStart; ii <= fileStop; ii++) {
+      std::stringstream ss;
+      if (ii < 100) {
+        ss << generalPath << "/"
+           << std::setw(3) << std::setfill('0') << ii;
+      } else {
+        ss << generalPath << "/" << ii;
+      }
+      std::string filePath = ss.str();
+      mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+      mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
+    }
+    std::cout << "Number of files per chain = " << fileStop << std::endl;
+  }
+
+  // instantiate and configure the aligner
+
+  AlignConfigHelper alignConfigParam;
+  alignConfigParam.minPoints = minPoints;
+
+  o2::mft::TracksToRecords aligner;
+
+  aligner.setClusterDictionary(dict);
+  aligner.setMinNumberClusterCut(alignConfigParam.minPoints);
+
+  aligner.setWithControl(doControl);
+  aligner.setNEntriesAutoSave(nEntriesAutoSave);
+
+  // TODO: fix det. elements here
+
+  // init Millipede
+  aligner.init();
+
+  // compute Mille records
+  aligner.startRecordWriter();
+  aligner.processROFs(mfttrackChain, mftclusterChain);
+  aligner.printProcessTrackSummary();
+  aligner.endRecordWriter();
+
+  // the end
+
+  std::chrono::steady_clock::time_point stop_time = std::chrono::steady_clock::now();
+
+  std::cout << "----------------------------------- " << endl;
+  std::cout << "Total Execution time: \t\t"
+            << std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time).count()
+            << " seconds" << endl;
+}
