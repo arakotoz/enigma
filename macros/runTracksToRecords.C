@@ -33,11 +33,11 @@ struct AlignConfigHelper {
 // .L ~/cernbox/alice/enigma/macros/runTracksToRecords.C++
 // runTracksToRecords()
 
-void runTracksToRecords(const Int_t fileStop = 2, // 4315,
+void runTracksToRecords(const Int_t fileStop = 10, // 4315,
                         const int minPoints = 6,
                         const bool preferAlignedFile = true,
                         const bool doControl = true,
-                        const int nEntriesAutoSave = 500)
+                        const int nEntriesAutoSave = 5000)
 {
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
@@ -130,8 +130,4 @@ void runTracksToRecords(const Int_t fileStop = 2, // 4315,
   std::cout << "Total Execution time: \t\t"
             << std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time).count()
             << " seconds" << endl;
-
-  delete mfttrackChain;
-  delete mftclusterChain;
-  delete dict;
 }
