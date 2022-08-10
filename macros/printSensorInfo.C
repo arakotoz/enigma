@@ -49,8 +49,9 @@ void printSensorInfo(
   if (!wAllSensors) {
     NChips = 10;
   }
-  for (Int_t iChip = 0; iChip < NChips; iChip++) {
-    SensorInfo chipInfo(iChip, geom);
+  SensorInfo chipInfo(geom);
+  for (int iChip = 0; iChip < NChips; iChip++) {
+    chipInfo.setSensor(iChip);
     chipInfo.print(wSymName, wTranslation, wRotation, wDeg);
   }
 }

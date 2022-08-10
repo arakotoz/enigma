@@ -1668,6 +1668,6 @@ void halfLayerSegmentation()
   // printAllChipsInGeoOrder();
   // printAllChips();
   // genMap();
-  // printSymNameChip();
-  printSensorID();
+  printSymNameChip();
+  // printSensorID();
 }
