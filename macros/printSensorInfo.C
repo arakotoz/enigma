@@ -15,14 +15,19 @@
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
-
-#include "sensorInfo.h"
+#include "MFTAlignment/AlignSensorHelper.h"
 
 #endif
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/printSensorInfo.C++
 // printSensorInfo()
+
+void print(o2::mft::AlignSensorHelper chipHelper,
+           bool wSymName,
+           bool wTranslation,
+           bool wRotation,
+           bool wDeg);
 
 void printSensorInfo(
   const bool wAllSensors = true,
@@ -49,9 +54,44 @@ void printSensorInfo(
   if (!wAllSensors) {
     NChips = 10;
   }
-  SensorInfo chipInfo(geom);
+
+  // print info for a given sensor
+
+  o2::mft::AlignSensorHelper chipHelper;
   for (int iChip = 0; iChip < NChips; iChip++) {
-    chipInfo.setSensor(iChip);
-    chipInfo.print(wSymName, wTranslation, wRotation, wDeg);
+    chipHelper.setSensor(iChip);
+    print(chipHelper, wSymName, wTranslation, wRotation, wDeg);
   }
+}
+
+void print(o2::mft::AlignSensorHelper chipHelper,
+           bool wSymName,
+           bool wTranslation,
+           bool wRotation,
+           bool wDeg)
+{
+  std::streamsize ss = std::cout.precision();
+  std::stringstream name = chipHelper.getSensorFullName(wSymName);
+  std::cout << name.str().c_str();
+  if (wTranslation) {
+    std::cout << std::scientific << std::setprecision(2)
+              << " (cm) dx " << chipHelper.translateX()
+              << " dy " << chipHelper.translateY()
+              << " dz " << chipHelper.translateZ();
+  }
+  if (wRotation) {
+    constexpr double rad2deg = 180.0 / 3.14159265358979323846;
+    double rotX = chipHelper.angleRx();
+    double rotY = chipHelper.angleRy();
+    double rotZ = chipHelper.angleRz();
+    if (wDeg) {
+      rotX *= rad2deg;
+      rotY *= rad2deg;
+      rotZ *= rad2deg;
+      std::cout << " (deg)";
+    }
+    std::cout << std::scientific << std::setprecision(2)
+              << " Rx " << rotX << " Ry " << rotY << " Rz " << rotZ;
+  }
+  std::cout << std::setprecision(ss) << std::endl;
 }
