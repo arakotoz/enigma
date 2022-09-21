@@ -1,0 +1,103 @@
+
+
+struct Chip {
+  int half, disk, face, zone, tr, row, col, noise;
+};
+
+bool compareInterval(Chip i1, Chip i2)
+{
+  if (i1.half < i2.half) {
+    return true;
+  } else if (i1.half == i2.half) {
+    if (i1.disk < i2.disk) {
+      return true;
+    } else if (i1.disk == i2.disk) {
+      if (i1.face < i2.face) {
+        return true;
+      } else if (i1.face == i2.face) {
+        if (i1.zone < i2.zone) {
+          return true;
+        } else if (i1.zone == i2.zone) {
+          if (i1.tr < i2.tr) {
+            return true;
+          } else {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
+// how to run ?
+// > alien.py
+// (the command above is needed only once to init the alien token)
+// > alienv setenv O2Physics/latest -c root -l
+// root [0] .x enigma/macros/sortNoiseMap.C(1659890496672)
+
+void sortNoiseMap(long timestamp = -1, bool useProductionCcdb = true)
+{
+
+  const o2::itsmft::ChipMappingMFT mapping;
+  auto chipMap = mapping.getChipMappingData();
+  int NChips = o2::itsmft::ChipMappingMFT::NChips;
+
+  o2::ccdb::CcdbApi api;
+  std::string ccdbAddress = "ccdb-test.cern.ch:8080";
+  if (useProductionCcdb) {
+    ccdbAddress = "alice-ccdb.cern.ch";
+  }
+  api.init(ccdbAddress.c_str());
+  map<string, string> headers;
+  map<std::string, std::string> filter;
+  auto calib = api.retrieveFromTFileAny<o2::itsmft::NoiseMap>("MFT/Calib/NoiseMap/", filter, timestamp, &headers);
+  float thresh = 0;
+  //	calib->dumpAboveThreshold(thresh);
+  vector<int> vecNoise;
+  vector<Chip> vecChip;
+  int nb_chips = 0;
+  for (int id = 0; id < NChips; id++) {
+    bool empty = true;
+    for (int row = 0; row < 512; row++) {
+      for (int col = 0; col < 1024; col++) {
+        int lvl = calib->getNoiseLevel(id, row, col);
+        if (lvl) {
+          Int_t cableHW = chipMap[id].cable;
+          Int_t half = chipMap[id].half;
+          Int_t layer = chipMap[id].layer;
+          Int_t face = layer % 2;
+          Int_t disk = chipMap[id].disk;
+          Int_t zone = chipMap[id].zone;
+
+          vecChip.push_back({half, disk, face, zone, cableHW, row, col, lvl});
+
+          empty = false;
+        }
+      }
+    }
+    if (!empty) {
+      nb_chips++;
+    }
+  }
+  sort(vecChip.begin(), vecChip.end(), compareInterval);
+  int nb_pixels = vecChip.size();
+  cout << nb_pixels << endl;
+
+  std::ofstream OutStream;
+  OutStream.open("noiseMap_sorted.csv");
+  OutStream << "half,disk,face,zone,tr,row,col,nhits" << endl;
+
+  for (int i = 0; i < nb_pixels; i++) {
+    OutStream << vecChip[i].half << "," << vecChip[i].disk << "," << vecChip[i].face << "," << vecChip[i].zone << "," << vecChip[i].tr << "," << vecChip[i].row << "," << vecChip[i].col << "," << vecChip[i].noise << endl;
+  }
+  OutStream.close();
+}
