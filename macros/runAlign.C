@@ -9,8 +9,10 @@
 #include <ROOT/RDataFrame.hxx>
 #include <TFile.h>
 #include <TChain.h>
+#include <TTree.h>
 
 #include "DetectorsCommonDataFormats/AlignParam.h"
+#include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
 
@@ -100,9 +102,55 @@ void runAlign(const double chi2CutFactor = 65536, // 256
   std::vector<o2::detectors::AlignParam> alignParams;
   aligner.getAlignParams(alignParams);
   LOGF(info, "Storing MFT alignment params in local file %s/mft_alignment.root", generalPath.c_str());
-  TFile afile(Form("%s/mft_alignment.root", generalPath.c_str()), "recreate", "", 505);
-  afile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
-  afile.Close();
+  TFile outAlignParamFile(Form("%s/mft_alignment.root", generalPath.c_str()), "recreate", "", 505);
+  outAlignParamFile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
+  outAlignParamFile.Close();
+
+  // save Pede outputs to a file
+
+  const int nDofPerSensor = aligner.getNDofPerSensor();
+  std::vector<double> vPedeOutParams;
+  std::vector<double> vPedeOutParamsErrors;
+  std::vector<double> vPedeOutParamsPulls;
+  aligner.getPedeOutParams(vPedeOutParams);
+  aligner.getPedeOutParamsErrors(vPedeOutParamsErrors);
+  aligner.getPedeOutParamsPulls(vPedeOutParamsPulls);
+  TFile outPedefile(Form("%s/mft_pede_outputs.root", generalPath.c_str()), "recreate", "", 505);
+  double dx = 0., dy = 0., dz = 0., dRz = 0.;
+  double dxErr = 0., dyErr = 0., dzErr = 0., dRzErr = 0.;
+  double dxPull = 0., dyPull = 0., dzPull = 0., dRzPull = 0.;
+  TTree* tree = new TTree("pede", "the Pede output tree");
+  tree->Branch("dx", &dx, "dx/D");
+  tree->Branch("dy", &dy, "dy/D");
+  tree->Branch("dz", &dz, "dz/D");
+  tree->Branch("dRz", &dRz, "dRz/D");
+  tree->Branch("dxErr", &dxErr, "dxErr/D");
+  tree->Branch("dyErr", &dyErr, "dyErr/D");
+  tree->Branch("dzErr", &dzErr, "dzErr/D");
+  tree->Branch("dRzErr", &dRzErr, "dRzErr/D");
+  tree->Branch("dxPull", &dxPull, "dxPull/D");
+  tree->Branch("dyPull", &dyPull, "dyPull/D");
+  tree->Branch("dzPull", &dzPull, "dzPull/D");
+  tree->Branch("dRzPull", &dRzPull, "dRzPull/D");
+  o2::itsmft::ChipMappingMFT chipMappingMFT;
+  int NChips = o2::itsmft::ChipMappingMFT::NChips;
+  for (int iChip = 0; iChip < NChips; iChip++) {
+    dx = vPedeOutParams[iChip * nDofPerSensor + 0];
+    dy = vPedeOutParams[iChip * nDofPerSensor + 1];
+    dz = vPedeOutParams[iChip * nDofPerSensor + 3];
+    dRz = vPedeOutParams[iChip * nDofPerSensor + 2];
+    dxErr = vPedeOutParamsErrors[iChip * nDofPerSensor + 0];
+    dyErr = vPedeOutParamsErrors[iChip * nDofPerSensor + 1];
+    dzErr = vPedeOutParamsErrors[iChip * nDofPerSensor + 3];
+    dRzErr = vPedeOutParamsErrors[iChip * nDofPerSensor + 2];
+    dxPull = vPedeOutParamsPulls[iChip * nDofPerSensor + 0];
+    dyPull = vPedeOutParamsPulls[iChip * nDofPerSensor + 1];
+    dzPull = vPedeOutParamsPulls[iChip * nDofPerSensor + 3];
+    dRzPull = vPedeOutParamsPulls[iChip * nDofPerSensor + 2];
+    tree->Fill();
+  }
+  tree->Write();
+  outPedefile.Close();
 
   // the end
 
