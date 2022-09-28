@@ -27,7 +27,7 @@
 // runTracksToAlignInfoTree()
 
 //__________________________________________________________________________
-void runTracksToAlignInfoTree(const int fileStop = 10, // 4315,
+void runTracksToAlignInfoTree(const int fileStop = 4315,
                               const int minNumberClustersPerTrack = 4,
                               const bool preferAlignedFile = true,
                               const int nEntriesAutoSave = 10000)
@@ -99,6 +99,7 @@ void runTracksToAlignInfoTree(const int fileStop = 10, // 4315,
   // process cluster and track chains
 
   mftAlignController->processROFs(mfttrackChain, mftclusterChain);
+  mftAlignController->printProcessTrackSummary();
 
   // the end
 

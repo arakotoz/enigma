@@ -213,7 +213,7 @@ void TracksToAlignControl::processROFs(TChain* mfttrackChain, TChain* mftcluster
 //__________________________________________________________________________
 void TracksToAlignControl::printProcessTrackSummary()
 {
-  LOGF(info, "TracksToAlignControl processRecoTracks() summary: ");
+  LOGF(info, "TracksToAlignControl processROFs() summary: ");
   LOGF(info,
        "n ROFs = %d, used tracks = %d, skipped tracks = %d",
        mNumberOfTrackChainROFs, mCounterUsedTracks, mCounterSkippedTracks);
