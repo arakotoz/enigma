@@ -19,7 +19,7 @@
 // .L ~/cernbox/alice/enigma/macros/exportAlignedGeom.C++
 // exportAlignedGeom()
 
-void exportAlignedGeom(std::string alignParamFileName = "mftprealignment.root")
+void exportAlignedGeom(std::string alignParamFileName = "mft_alignment.root")
 {
 
   // load ideal geometry (o2sim_geometry.root)
