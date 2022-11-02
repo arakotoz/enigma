@@ -106,6 +106,20 @@ void runAlign(const double chi2CutFactor = 65536, // 256
   outAlignParamFile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
   outAlignParamFile.Close();
 
+  // apply alignment
+
+  bool isAlignApplied = o2::base::GeometryManager::applyAlignment(alignParameters);
+  if (isAlignApplied) {
+    std::cout << "Successfully applied alignment parameters" << std::endl;
+
+    // generate aligned geometry file (o2sim_geometry-aligned.root)
+    auto alignedgeomfile = o2::base::NameConf::getAlignedGeomFileName();
+    gGeoManager->Export(Form("%s/new-%s", generalPath.c_str(), alignedgeomfile.c_str()));
+    std::cout << "New geometry file generated : "
+              << Form("%s/new-%s", generalPath.c_str(), alignedgeomfile.c_str())
+              << std::endl;
+  }
+
   // save Pede outputs to a file
 
   const int nDofPerSensor = aligner.getNDofPerSensor();
