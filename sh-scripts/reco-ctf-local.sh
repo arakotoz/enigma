@@ -31,20 +31,21 @@ fi
 
 inputfile="small-ctf-local-file-list.txt"
 
-severity="info"
-logConfig="--severity ${severity} --fairmq-rate-logging 0 " #--infologger-mode \"stdout\""
 shmSize=16000000000
 
-readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 8 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
+severity="info"
+logConfig="--severity ${severity} --resources-monitoring 50 --resources-monitoring-dump-interval 50 --early-forward-policy noraw --fairmq-rate-logging 0 --timeframes-rate-limit 1 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
-recoOptions="MFTTracking.forceZeroField=true;MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTAlpideParam.roFrameLengthInBC=198;"
-recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --clusters-from-upstream --mft-track-writer --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} "
+readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} "
+
+recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTAlpideParam.roFrameLengthInBC=198;"
+recoCmd="o2-mft-reco-workflow --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --nThreads 1 --clusters-from-upstream --mft-track-writer --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} "
 
 # Concatenate workflow
 runCmd=" $readCmd "
 runCmd+=" | $recoCmd"
-runCmd+=" | o2-dpl-run  ${logConfig} --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
-#runCmd+=" -b --run "
+#runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-id 0 --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
+runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-id 0 --shm-segment-size ${shmSize} > ctf2cltrack.log"
 
 # List input files and command line
 echo "======================="
@@ -64,4 +65,5 @@ echo | eval "${runCmd}" # "echo | " is a hack (to provide input stream to O2 wor
 endTime=$(date +"%Y %m %d %H:%M:%S")
 echo "End "${endTime}
 echo "======================="
+cd /Users/andry/alice
 exit "$?"
