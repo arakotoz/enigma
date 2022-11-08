@@ -1,14 +1,17 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 # make sure that you are using O2 
+# to execute, do:
+# > . ~/cernbox/alice/enigma/sh-scripts/reco-ctf-local.sh
+# or:
+# > source ~/cernbox/alice/enigma/sh-scripts/reco-ctf-local.sh
 
-myDir="/Users/andry/cernbox/alice/mft/pilotbeam/505713/test-reco"
+baseDir="/Users/andry/cernbox"
+#baseDir="/afs/cern.ch/user/a/arakotoz/mycernbox"
+myDir="${baseDir}/alice/mft/pilotbeam/505713/test-reco"
 cd $myDir
 pwd
-LD_LIBRARY_PATH=/usr/local/lib:/usr/lib
-XROOTD_DIR=$(which xrootd-config | sed 's/bin\/xrootd-config//')
-LD_LIBRARY_PATH=${XROOTD_DIR}/lib:/Users/andry/alice/sw/osx_x86-64/JAliEn-ROOT/latest/lib:${LD_LIBRARY_PATH}
-echo $LD_LIBRARY_PATH
+echo "LD_LIBRARY_PATH="$LD_LIBRARY_PATH
 echo "======================="
 
 ## Ensure necessary files are present in the node work directory
@@ -44,7 +47,6 @@ recoCmd="o2-mft-reco-workflow --shm-segment-id 0 --shm-segment-size ${shmSize} $
 # Concatenate workflow
 runCmd=" $readCmd "
 runCmd+=" | $recoCmd"
-#runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-id 0 --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
 runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-id 0 --shm-segment-size ${shmSize} > ctf2cltrack.log"
 
 # List input files and command line
@@ -66,4 +68,4 @@ endTime=$(date +"%Y %m %d %H:%M:%S")
 echo "End "${endTime}
 echo "======================="
 cd /Users/andry/alice
-exit "$?"
+#exit "$?"
