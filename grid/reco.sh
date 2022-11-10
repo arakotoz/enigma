@@ -3,7 +3,7 @@
 currentDir=`pwd`
 
 echo "* *****************************************************"
-echp "* executing reco.sh ..."
+echo "* executing reco.sh ..."
 echo "* PATH: ${PATH}"
 echo "* LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
 echo "* Workdir: ${currentDir}"
@@ -20,7 +20,7 @@ fi
 ccdbGeomAlignedPath="GLO/Config/GeometryAligned"
 localCcdbBaseDir="${currentDir}/ccdb"
 mkdir -p "${localCcdbBaseDir}/${ccdbGeomAlignedPath}"
-cp -pfv "${geomFilenameAligned} ${localCcdbBaseDir}/${ccdbGeomAlignedPath}/."
+cp -pfv ${geomFilenameAligned} ${localCcdbBaseDir}/${ccdbGeomAlignedPath}/.
 
 if [ ! -e "${localCcdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}" ]; then
     echo "Cannot find ${localCcdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}"
@@ -47,8 +47,8 @@ shmSize=16000000000
 severity="info"
 logConfig="--severity ${severity} --resources-monitoring 50 --resources-monitoring-dump-interval 50 --early-forward-policy noraw --fairmq-rate-logging 0 --timeframes-rate-limit 1 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
-#readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
-readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file:?dst\" --remote-regex \"^alien:///alice/data/.+\" --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
+readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
+#readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file:?dst\" --remote-regex \"^alien:///alice/data/.+\" --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
 
 recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTAlpideParam.roFrameLengthInBC=198;"
 recoCmd="o2-mft-reco-workflow --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --nThreads 1 --clusters-from-upstream --mft-track-writer --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "

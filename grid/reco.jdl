@@ -1,6 +1,6 @@
 User = "arakotoz";
 JobTag = {
-  "comment:apply pass1 alignement to MFT geometry"
+  "comment:apply MFT pass1 alignment"
 };
 Packages = {
   "VO_ALICE@O2PDPSuite::nightly-20221107-1"
