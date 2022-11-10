@@ -1,35 +1,28 @@
 #!/usr/bin/env bash
 
+currentDir=`pwd`
+
+echo "* *****************************************************"
+echo "* PATH: ${PATH}"
+echo "* LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
+echo "* Workdir: ${currentDir}"
+echo "* *****************************************************"
+
 ## Ensure necessary files are present in the node work directory
-geomFilename="o2sim_geometry.root"
-geomFilenameAligned="o2sim_geometry-aligned.root"
-ctfDict="ctf_dictionary.root"
-mftDict="MFTdictionary.bin"
-grpFile="o2sim_grp.root"
 
-if [ ! -e "$geomFilename" ]; then
-    echo "Cannot find $geomFilename"
-    exit 1
-fi
-
-if [ ! -e "$geomFilenameAligned" ]; then
+geomFilenameAligned="snapshot.root"
+if [ ! -e "${geomFilenameAligned}" ]; then
     echo "Cannot find $geomFilenameAligned"
     exit 1
 fi
 
-if [ ! -e "$ctfDict" ]; then
-    echo "Cannot find $ctfDict"
-    exit 1
-fi
+ccdbGeomAlignedPath="GLO/Config/GeometryAligned"
+localCcdbBaseDir="${currentDir}/ccdb"
+mkdir -p "${localCcdbBaseDir}/${ccdbGeomAlignedPath}"
+cp -pfv "${geomFilenameAligned} ${localCcdbBaseDir}/${ccdbGeomAlignedPath}/."
 
-
-if [ ! -e "$mftDict" ]; then
-    echo "Cannot find $mftDict"
-    exit 1
-fi
-
-if [ ! -e "$grpFile" ]; then
-    echo "Cannot find $grpFile"
+if [ ! -e "${localCcdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}" ]; then
+    echo "Cannot find ${localCcdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}"
     exit 1
 fi
 
@@ -48,27 +41,29 @@ tmpInFile="wn.txt"
 
 makeFileList "${inFilename}" "${tmpInFile}" "${nodownload}"
 
+shmSize=16000000000
+
 severity="info"
-logConfig="--severity ${severity} " #--infologger-mode \"stdout\""
-shmSize=$(( 8 << 30 ))
+logConfig="--severity ${severity} --resources-monitoring 50 --resources-monitoring-dump-interval 50 --early-forward-policy noraw --fairmq-rate-logging 0 --timeframes-rate-limit 1 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
-readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${tmpInFile} --delay .1 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} -b "
+#readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
+readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file:?dst\" --remote-regex \"^alien:///alice/data/.+\" --ctf-input ${inputfile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
 
-recoOptions="MFTTracking.forceZeroField=true; MFTTracking.FullClusterScan=true; MFTTracking.MinTrackPointsLTF=5; MFTTracking.MinTrackStationsLTF=4; MFTTracking.LTFclsRCut=0.2; MFTTracking.LTFseed2BinWin=3; MFTTracking.MinTrackStationsCA=4; MFTTracking.ROADclsRCut=0.04; MFTTracking.MinTrackPointsCA=5;MFTAlpideParam.roFrameLengthInBC=198;"
-recoCmd="o2-mft-reco-workflow ${logConfig} --clusters-from-upstream --mft-cluster-writer --disable-mc --configKeyValues \""${recoOptions}"\""
-
-assessCmd="o2-mft-assessment-workflow ${logConfig} --disable-mc -b"
+recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTAlpideParam.roFrameLengthInBC=198;"
+recoCmd="o2-mft-reco-workflow --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --nThreads 1 --clusters-from-upstream --mft-track-writer --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath} "
 
 # Concatenate workflow
 runCmd=" $readCmd "
 runCmd+=" | $recoCmd"
-#runCmd+=" | $assessCmd"
-runCmd+=" | o2-dpl-run  ${logConfig} -b --run"
+runCmd+=" | o2-dpl-run  ${logConfig} --shm-segment-size ${shmSize} -b --run"
+runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-id 0 --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
 
 # List input files and command line
 echo "======================="
 echo "InputFiles on ${tmpInFile} :"
 cat  ${tmpInFile}
+echo "number of files :"
+cat  ${tmpInFile} | wc -l
 echo "======================="
 echo "Running reconstruction command: "
 echo "${runCmd} "
@@ -78,4 +73,9 @@ echo "======================="
 
 ## Runs reconstruction comand stored in $runCmd
 echo | eval "${runCmd}" # "echo | " is a hack (to provide input stream to O2 workflows?)
+
+endTime=$(date +"%Y %m %d %H:%M:%S")
+echo "End "${endTime}
+echo "======================="
+
 exit "$?"
