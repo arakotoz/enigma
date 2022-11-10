@@ -66,11 +66,11 @@ if ! [ -f mftclusters.root ]; then
    echo "Output file mftclusters.root not found. Job FAILED !"
    echo "Output file mftclusters.root not found. Job FAILED !" >>stderr
 fi
-#if ! [ -f MFTAssessment.root ]; then
-#   error=1
-#   echo "Output file MFTAssessment.root not found. Job FAILED !"
-#   echo "Output file MFTAssessment.root not found. Job FAILED !" >>stderr
-#fi
+if ! [ -f MFTAssessment.root ]; then
+   error=1
+   echo "Output file MFTAssessment.root not found. Job FAILED !"
+   echo "Output file MFTAssessment.root not found. Job FAILED !" >>stderr
+fi
 
 if [ $error = 0 ]; then
    echo "* ----------------   Job Validated  ------------------*"
