@@ -41,17 +41,17 @@ severity="info"
 logConfig="--severity ${severity} --timeframes-rate-limit 3 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
 #readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --mft-digits --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
-readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --mft-digits --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors -b "
+readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --mft-digits --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors "
 
 recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTClustererParam.maxBCDiffToMaskBias=10;"
 #recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTClustererParam.maxBCDiffToSquashBias=-10;MFTClustererParam.maxBCDiffToMaskBias=10;MFTAlpideParam.roFrameLengthInBC=396;"
-recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --digits-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" -b "
+recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --digits-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" "
 #recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --digits-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
 
 # Concatenate workflow
 runCmd=" $readCmd "
 runCmd+=" | $recoCmd"
-runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
+runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-size ${shmSize} > ctf2cltrack.log"
 
 # List input files and command line
 echo "======================="
