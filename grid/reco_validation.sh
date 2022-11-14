@@ -11,8 +11,7 @@ cd "$validateout" || exit 1
 validateworkdir=$(pwd)
 
 echo "*******************************************************"
-echo "* Automatically generated validation script           *"
-
+echo "* Executing validation script           *"
 echo "* Time:    $validatetime "
 echo "* Dir:     $validateout"
 echo "* Workdir: $validateworkdir"

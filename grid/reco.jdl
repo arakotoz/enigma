@@ -9,16 +9,18 @@ Executable = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/reco.sh";
 InputFile = {
   "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/ccdb/GLO/Config/GeometryAligned/snapshot.root"
 };
-InputDataList = "wn.xml";
-InputDataListFormat = "xml-single";
 InputDataCollection = {
   "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/$2/$1/$1.xml,nodownload"
 };
 Split = "file";
+SplitArguments = "wn.xml";
+InputDataListFormat = "xml-single";
+InputDataList = "wn.xml";
+#
 ValidationCommand = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/reco_validation.sh";
 OutputDir = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/$2/$1/output/#alien_counter_03i#";
 Output = {
-  "log_archive.zip:*.log,std*@disk=1",
+  "log_archive.zip:*.log,*mergerlog*,*serverlog*,*workerlog*,std*@disk=1",
   "root_archive.zip:MFTAssessment.root,mfttracks.root,mftclusters.root@disk=2"
 };
 
