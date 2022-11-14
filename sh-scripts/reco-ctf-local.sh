@@ -52,7 +52,7 @@ logConfig="--severity ${severity} --timeframes-rate-limit 3 --timeframes-rate-li
 readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath},${ccdbNoisePath} -b "
 
 recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;"
-recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath},${ccdbNoisePath} "
+recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath},${ccdbNoisePath} -b "
 
 # Concatenate workflow
 runCmd=" $readCmd "
