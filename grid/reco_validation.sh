@@ -58,23 +58,47 @@ fi
 if ! [ -f mfttracks.root ]; then
    error=1
    echo "Output file mfttracks.root not found. Job FAILED !"
-   echo "Output file mfttracks.root not found. Job FAILED !" >>stderr
+   echo "Output file mfttracks.root not found. Job FAILED !" >> stderr
 fi
 if ! [ -f mftclusters.root ]; then
    error=1
    echo "Output file mftclusters.root not found. Job FAILED !"
-   echo "Output file mftclusters.root not found. Job FAILED !" >>stderr
+   echo "Output file mftclusters.root not found. Job FAILED !" >> stderr
 fi
 if ! [ -f MFTAssessment.root ]; then
    error=1
    echo "Output file MFTAssessment.root not found. Job FAILED !"
-   echo "Output file MFTAssessment.root not found. Job FAILED !" >>stderr
+   echo "Output file MFTAssessment.root not found. Job FAILED !" >> stderr
+fi
+ccdbErr=$(grep -Ei "Unable to find object GLO" ctf2cltrack.log)
+if [ "$ccdbErr" != "" ]; then
+   error=1
+   echo "* ########## Job not validated - error accessing CCDB file(s)  ###"
+   echo "$ccdbErr"
+   echo "$ccdbErr" >> stderr
+fi
+coreDumpErr=$(grep -Ei "core dump" ctf2cltrack.log)
+if [ "$coreDumpErr" != "" ]; then
+   error=1
+   echo "* ########## Job not validated - core dump generated  ###"
+   echo "$coreDumpErr"
+   echo "$coreDumpErr" >> stderr
+   txt=$(grep -Ei "crashed" ctf2cltrack.log)
+   echo "$txt" >> stderr
+fi
+copyCmdErr=$(grep -Ei "failed for copy command alien_cp" ctf2cltrack.log)
+if [ "$copyCmdErr" != "" ]; then
+   error=1
+   echo "* ########## Job not validated - failed alien_cp  ###"
+   echo "$copyCmdErr"
+   echo "$copyCmdErr" >> stderr
 fi
 
 if [ $error = 0 ]; then
    echo "* ----------------   Job Validated  ------------------*"
    echo "* === Logs std* will be deleted === "
    rm -f std*
+   rm -f alien_py.log
 fi
 echo "* ----------------------------------------------------*"
 echo "*******************************************************"
