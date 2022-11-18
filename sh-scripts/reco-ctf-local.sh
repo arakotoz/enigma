@@ -1,18 +1,33 @@
 #!/usr/bin/env zsh
-
-# make sure that you are using O2 
-# to execute, do:
+#
+## make sure that you are using O2 
+# > /cvmfs/alice.cern.ch/bin/alienv enter VO_ALICE@O2Physics::nightly-20221017-1
+## to execute, do:
 # > . ~/cernbox/alice/enigma/sh-scripts/reco-ctf-local.sh
-# or:
+## or:
 # > source ~/cernbox/alice/enigma/sh-scripts/reco-ctf-local.sh
+#
 
+MODE=$(echo $HOME | grep afs) # if empty, then using laptop, else running on lxplus
 baseDir="/Users/andry/cernbox"
-#baseDir="/afs/cern.ch/user/a/arakotoz/mycernbox"
+inputfile="small-ctf-local-file-list.txt"
+
+echo "======================="
+
+if [ ! -z "${MODE}" ]
+then
+    echo "MODE = lxplus"
+    baseDir="/afs/cern.ch/user/a/arakotoz/mycernbox"
+    inputfile="small-ctf-alien-file-list.txt"
+else
+    echo "MODE = laptop"
+    echo "LD_LIBRARY_PATH="$LD_LIBRARY_PATH
+fi
+
 myDir="${baseDir}/alice/mft/pilotbeam/505713/test-reco"
 cd $myDir
-pwd
-echo "LD_LIBRARY_PATH="$LD_LIBRARY_PATH
 echo "======================="
+pwd
 
 ## Ensure necessary files are present in the node work directory
 ccdbBaseDir="${myDir}/ccdb"
@@ -32,34 +47,38 @@ if [ ! -e "${ccdbBaseDir}/${ccdbMagfieldPath}/${magfieldFilename}" ]; then
     exit 1
 fi
 
-noiseFilename="snapshot.root"
-ccdbNoisePath="MFT/Calib/NoiseMap"
+#noiseFilename="snapshot.root"
+#ccdbNoisePath="MFT/Calib/NoiseMap"
 
-if [ ! -e "${ccdbBaseDir}/${ccdbNoisePath}/${noiseFilename}" ]; then
-    echo "Cannot find ${ccdbBaseDir}/${ccdbNoisePath}/${noiseFilename}"
-    exit 1
-fi
-
-
-inputfile="small-ctf-local-file-list.txt"
-#inputfile="small-ctf-alien-file-list.txt"
+#if [ ! -e "${ccdbBaseDir}/${ccdbNoisePath}/${noiseFilename}" ]; then
+#    echo "Cannot find ${ccdbBaseDir}/${ccdbNoisePath}/${noiseFilename}"
+#    exit 1
+#fi
 
 shmSize=16000000000
 
 severity="info"
 logConfig="--severity ${severity} --timeframes-rate-limit 3 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
-readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath},${ccdbNoisePath} -b "
+readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
 
-recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;"
-recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath},${ccdbNoisePath} -b "
+## laptop
+recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;"
+threadOptions="--nThreads 2"
+if [ ! -z "${MODE}" ]
+then
+    ## lxplus
+    recoOptions="MFTTracking.forceZeroField=true;MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;"
+    threadOptions=""
+fi
+recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} ${threadOptions} --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
 
-# Concatenate workflow
+## Concatenate workflow
 runCmd=" $readCmd "
 runCmd+=" | $recoCmd"
 runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
 
-# List input files and command line
+## List input files and command line
 echo "======================="
 echo "Input file : ${inputfile}"
 echo "number of files :"
@@ -77,4 +96,9 @@ eval "${runCmd}"
 endTime=$(date +"%Y %m %d %H:%M:%S")
 echo "End "${endTime}
 echo "======================="
-cd /Users/andry/alice
+
+if [ -z "${MODE}" ]
+then 
+    ## laptop
+    cd /Users/andry/alice
+fi
