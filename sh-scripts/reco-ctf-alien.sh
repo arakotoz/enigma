@@ -2,38 +2,76 @@
 
 # make sure that you are using O2 from CVMFS
 # via for e.g. 
-# > /cvmfs/alice.cern.ch/bin/alienv enter VO_ALICE@O2Physics::nightly-20221107-1
+# > /cvmfs/alice.cern.ch/bin/alienv enter VO_ALICE@O2Physics::nightly-20221017-1
+## to execute, do:
+# > . ~/cernbox/alice/enigma/sh-scripts/reco-ctf-alien.sh
+## or:
+# > source ~/cernbox/alice/enigma/sh-scripts/reco-ctf-alien.sh
+#
 
-#baseDir="/Users/andry/cernbox"
-baseDir="/afs/cern.ch/user/a/arakotoz/mycernbox"
+MODE=$(echo $HOME | grep afs) # if empty, then using laptop, else running on lxplus
+baseDir="/Users/andry/cernbox"
+inputfile="small-ctf-alien-file-list.txt"
+
+echo "======================="
+
+if [ ! -z "${MODE}" ]
+then
+    echo "MODE = lxplus"
+    baseDir="/afs/cern.ch/user/a/arakotoz/mycernbox"
+else
+    echo "MODE = laptop"
+    echo "LD_LIBRARY_PATH="$LD_LIBRARY_PATH
+fi
+
 myDir="${baseDir}/alice/mft/pilotbeam/505713/test-reco"
 cd $myDir
+echo "======================="
 pwd
 
 ## Ensure necessary files are present in the node work directory
-#ccdbBaseDir="${myDir}/ccdb"
-#geomFilenameAligned="snapshot.root"
-#ccdbGeomAlignedPath="GLO/Config/GeometryAligned"
+ccdbBaseDir="${myDir}/ccdb"
+geomFilenameAligned="snapshot.root"
+ccdbGeomAlignedPath="GLO/Config/GeometryAligned"
 
-#if [ ! -e "${ccdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}" ]; then
-#    echo "Cannot find ${ccdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}"
+if [ ! -e "${ccdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}" ]; then
+    echo "Cannot find ${ccdbBaseDir}/${ccdbGeomAlignedPath}/${geomFilenameAligned}"
+    exit 1
+fi
+
+magfieldFilename="snapshot.root"
+ccdbMagfieldPath="GLO/Config/GRPMagField"
+
+if [ ! -e "${ccdbBaseDir}/${ccdbMagfieldPath}/${magfieldFilename}" ]; then
+    echo "Cannot find ${ccdbBaseDir}/${ccdbMagfieldPath}/${magfieldFilename}"
+    exit 1
+fi
+
+#noiseFilename="snapshot.root"
+#ccdbNoisePath="MFT/Calib/NoiseMap"
+
+#if [ ! -e "${ccdbBaseDir}/${ccdbNoisePath}/${noiseFilename}" ]; then
+#    echo "Cannot find ${ccdbBaseDir}/${ccdbNoisePath}/${noiseFilename}"
 #    exit 1
 #fi
-
-inputfile="small-ctf-alien-file-list.txt"
 
 shmSize=16000000000
 
 severity="info"
 logConfig="--severity ${severity} --timeframes-rate-limit 3 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
-#readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^alien:///alice/data/.+\"  --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath} "
-readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^alien:///alice/data/.+\"  --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors -b "
+readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^alien:///alice/data/.+\"  --ctf-input ${inputfile} --delay 1 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
 
-recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;"
-#recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTAlpideParam.roFrameLengthInBC=198;"
-#recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --clusters-from-upstream --mft-track-writer --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath} "
-recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} --nThreads 2 --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" -b "
+## laptop
+recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;"
+threadOptions="--nThreads 2"
+if [ ! -z "${MODE}" ]
+then
+    ## lxplus
+    recoOptions="MFTTracking.forceZeroField=true;MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;"
+    threadOptions=""
+fi
+recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} ${threadOptions} --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${ccdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
 
 # Concatenate workflow
 runCmd=" $readCmd "
@@ -58,4 +96,9 @@ eval "${runCmd}"
 endTime=$(date +"%Y %m %d %H:%M:%S")
 echo "End "${endTime}
 echo "======================="
-#cd ${myDir}
+
+if [ -z "${MODE}" ]
+then 
+    ## laptop
+    cd ${myDir}
+fi

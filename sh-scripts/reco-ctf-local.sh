@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 #
 ## make sure that you are using O2 
 # > /cvmfs/alice.cern.ch/bin/alienv enter VO_ALICE@O2Physics::nightly-20221017-1
@@ -100,5 +100,5 @@ echo "======================="
 if [ -z "${MODE}" ]
 then 
     ## laptop
-    cd /Users/andry/alice
+    cd ${myDir}
 fi
