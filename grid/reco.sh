@@ -4,6 +4,8 @@ currentDir=`pwd`
 
 echo "* *****************************************************"
 echo "* Executing reco.sh ..."
+echo "* O2PHYSICS_ROOT=${O2PHYSICS_ROOT}"
+echo "* O2_ROOT=${O2_ROOT}"
 echo "* Workdir: ${currentDir}"
 echo "* *****************************************************"
 echo ""
@@ -12,7 +14,7 @@ echo ""
 
 localCcdbBaseDir="${currentDir}/ccdb"
 
-geomFilenameAligned="o2sim_geometry-prealigned.root"
+geomFilenameAligned="pass1_o2sim_geometry-aligned.root"
 if [ ! -e "${geomFilenameAligned}" ]; then
     echo "Cannot find $geomFilenameAligned, exit"
     exit 1
@@ -53,20 +55,23 @@ fi
 shmSize=16000000000
 
 severity="info"
-logConfig="--severity ${severity} --resources-monitoring 50 --resources-monitoring-dump-interval 50 --early-forward-policy noraw --fairmq-rate-logging 0 --timeframes-rate-limit 1 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
+logConfig="--severity ${severity} --timeframes-rate-limit 3 --timeframes-rate-limit-ipcid 0 " #--infologger-mode \"stdout\""
 
-#readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${tmpInFile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagPath} "
-readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^alien:///alice/data/.+\" --ctf-input ${tmpInFile} --delay 8 --loop 0 --onlyDet MFT --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagPath} "
+#readCmd="o2-ctf-reader-workflow --copy-cmd no-copy --ctf-input ${tmpInFile} --delay 1.5 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagfieldPath} -b "
+readCmd="o2-ctf-reader-workflow --copy-cmd \"alien_cp ?src file://?dst\" --remote-regex \"^alien:///alice/data/.+\"  --ctf-input ${tmpInFile} --delay 1.5 --loop 0 --onlyDet MFT --shm-segment-size ${shmSize} ${logConfig} --allow-missing-detectors --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagPath} -b "
 
-recoOptions="MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;MFTAlpideParam.roFrameLengthInBC=198;"
-recoCmd="o2-mft-reco-workflow --shm-segment-id 0 --shm-segment-size ${shmSize} ${logConfig} --nThreads 1 --clusters-from-upstream --mft-track-writer --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagPath} "
+recoOptions="MFTTracking.forceZeroField=true;MFTTracking.FullClusterScan=true;MFTTracking.LTFclsRCut=0.2;MFTTracking.trackmodel=2;" #MFTAlpideParam.roFrameLengthInBC=198;"
+threadOptions="" #"--nThreads 2"
+recoCmd="o2-mft-reco-workflow --shm-segment-size ${shmSize} ${logConfig} ${threadOptions} --clusters-from-upstream --mft-cluster-writer --disable-mc --pipeline mft-tracker:1 --run-assessment --configKeyValues \""${recoOptions}"\" --condition-remap file://${localCcdbBaseDir}=${ccdbGeomAlignedPath},${ccdbMagPath} -b "
 
-# Concatenate workflow
+## Concatenate workflow
+
 runCmd=" $readCmd "
 runCmd+=" | $recoCmd"
-runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-id 0 --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
+runCmd+=" | o2-dpl-run ${logConfig} --shm-segment-size ${shmSize} -b --run > ctf2cltrack.log"
 
-# List input files and command line
+## List input files and command line
+
 echo ""
 echo "======================="
 echo "xml file list "${inFilename}
@@ -83,6 +88,7 @@ echo "Start "${startTime}
 echo "======================="
 
 ## Runs reconstruction comand stored in $runCmd
+
 echo | eval "${runCmd}" # "echo | " is a hack (to provide input stream to O2 workflows?)
 
 endTime=$(date +"%Y %m %d %H:%M:%S")
