@@ -3,7 +3,9 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <string>
+#include <sstream>
 
 #include <Rtypes.h>
 #include <ROOT/RDataFrame.hxx>
@@ -11,11 +13,13 @@
 #include <TChain.h>
 #include <TTree.h>
 
+#include "CommonUtils/NameConf.h"
 #include "DetectorsCommonDataFormats/AlignParam.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
 
+#include "MFTAlignment/AlignSensorHelper.h"
 #include "MFTAlignment/RecordsToAlignParams.h"
 
 #endif
@@ -37,7 +41,8 @@ struct AlignConfigHelper {
 // runAlign()
 
 void runAlign(const double chi2CutFactor = 65536, // 256
-              const bool preferAlignedFile = true,
+              const bool preferAlignedFile = false,
+              const bool useMilleAlignment = true,
               const bool doControl = true,
               const int nEntriesAutoSave = 500)
 {
@@ -78,19 +83,34 @@ void runAlign(const double chi2CutFactor = 65536, // 256
 
   aligner.init();
 
-  // records chains
+  // get chain of records
 
   std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/";
-  std::string alignStatus = "";
+  std::string alignStatus = "idealgeo";
+  std::string alignParamFileName = "mft_alignment";
+  std::string recordFileName = "mft_mille_records";
+  TChain* recordChain = new TChain("milleRecords");
   if (preferAlignedFile || applyMisalignment) {
-    alignStatus = "prealigned";
+    if (useMilleAlignment) {
+      // records built from tracks reconstructed with pass 1 geometry
+      alignStatus = "out-mille/pass1b";
+      recordFileName = "pass1b_mft_mille_records";
+      alignParamFileName = "pass1b_mft_alignment";
+    } else {
+      // records built from tracks reconstructed with prealigned geometry
+      alignStatus = "out-mille/pass1";
+      recordFileName = "pass1_mft_mille_records";
+      alignParamFileName = "pass1_mft_alignment";
+    }
   } else {
-    alignStatus = "idealgeo";
+    // records built from tracks reconstructed with ideal geometry
+    alignStatus = "out-mille/pass2";
+    recordFileName = "pass2_mft_mille_records";
+    alignParamFileName = "pass2_mft_alignment";
   }
   generalPath += alignStatus;
-
-  TChain* recordChain = new TChain("milleRecords");
-  recordChain->Add("mft_mille_records.root");
+  LOGF(info, "Load records from file %s/%s.root", generalPath.c_str(), recordFileName.c_str());
+  recordChain->Add(Form("%s/%s.root", generalPath.c_str(), recordFileName.c_str()));
 
   // compute alignment parameters
 
@@ -101,14 +121,16 @@ void runAlign(const double chi2CutFactor = 65536, // 256
 
   std::vector<o2::detectors::AlignParam> alignParams;
   aligner.getAlignParams(alignParams);
-  LOGF(info, "Storing MFT alignment params in local file %s/mft_alignment.root", generalPath.c_str());
-  TFile outAlignParamFile(Form("%s/mft_alignment.root", generalPath.c_str()), "recreate", "", 505);
+  LOGF(info, "Storing MFT alignment params in local file %s/%s.root",
+       generalPath.c_str(), alignParamFileName.c_str());
+  TFile outAlignParamFile(Form("%s/%s.root", generalPath.c_str(), alignParamFileName.c_str()),
+                          "recreate", "", 505);
   outAlignParamFile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
   outAlignParamFile.Close();
 
   // apply alignment
 
-  bool isAlignApplied = o2::base::GeometryManager::applyAlignment(alignParameters);
+  bool isAlignApplied = o2::base::GeometryManager::applyAlignment(alignParams);
   if (isAlignApplied) {
     std::cout << "Successfully applied alignment parameters" << std::endl;
 
@@ -120,7 +142,7 @@ void runAlign(const double chi2CutFactor = 65536, // 256
               << std::endl;
   }
 
-  // save Pede outputs to a file
+  // save Pede outputs to ROOT and CSV files
 
   const int nDofPerSensor = aligner.getNDofPerSensor();
   std::vector<double> vPedeOutParams;
@@ -130,9 +152,17 @@ void runAlign(const double chi2CutFactor = 65536, // 256
   aligner.getPedeOutParamsErrors(vPedeOutParamsErrors);
   aligner.getPedeOutParamsPulls(vPedeOutParamsPulls);
   TFile outPedefile(Form("%s/mft_pede_outputs.root", generalPath.c_str()), "recreate", "", 505);
-  double dx = 0., dy = 0., dz = 0., dRz = 0.;
-  double dxErr = 0., dyErr = 0., dzErr = 0., dRzErr = 0.;
-  double dxPull = 0., dyPull = 0., dzPull = 0., dRzPull = 0.;
+  std::ofstream OutStream;
+  OutStream.open(Form("%s/%s.csv", generalPath.c_str(), alignParamFileName.c_str()));
+  OutStream << "half,disk,layer,zone,con,tr,chipid,dx,dy,dz,dRx,dRy,dRz,dxErr,dyErr,dzErr,dRxErr,dRyErr,dRzErr,dxPull,dyPull,dzPull,dRxPull,dRyPull,dRzPull"
+            << endl;
+  o2::mft::AlignSensorHelper chipHelper;
+  double dx = 0., dy = 0., dz = 0.;
+  double dxErr = 0., dyErr = 0., dzErr = 0.;
+  double dxPull = 0., dyPull = 0., dzPull = 0.;
+  double dRx = 0., dRy = 0., dRz = 0.;
+  double dRxErr = 0., dRyErr = 0., dRzErr = 0.;
+  double dRxPull = 0., dRyPull = 0., dRzPull = 0.;
   TTree* tree = new TTree("pede", "the Pede output tree");
   tree->Branch("dx", &dx, "dx/D");
   tree->Branch("dy", &dy, "dy/D");
@@ -149,6 +179,7 @@ void runAlign(const double chi2CutFactor = 65536, // 256
   o2::itsmft::ChipMappingMFT chipMappingMFT;
   int NChips = o2::itsmft::ChipMappingMFT::NChips;
   for (int iChip = 0; iChip < NChips; iChip++) {
+    chipHelper.setSensorOnlyInfo(iChip);
     dx = vPedeOutParams[iChip * nDofPerSensor + 0];
     dy = vPedeOutParams[iChip * nDofPerSensor + 1];
     dz = vPedeOutParams[iChip * nDofPerSensor + 3];
@@ -162,9 +193,24 @@ void runAlign(const double chi2CutFactor = 65536, // 256
     dzPull = vPedeOutParamsPulls[iChip * nDofPerSensor + 3];
     dRzPull = vPedeOutParamsPulls[iChip * nDofPerSensor + 2];
     tree->Fill();
+    OutStream << chipHelper.half() << ","
+              << chipHelper.disk() << ","
+              << chipHelper.layer() << ","
+              << chipHelper.zone() << ","
+              << chipHelper.connector() << ","
+              << chipHelper.transceiver() << ","
+              << iChip << ","
+              << dx << "," << dy << "," << dz << ","
+              << dRx << "," << dRy << "," << dRz << ","
+              << dxErr << "," << dyErr << "," << dzErr << ","
+              << dRxErr << "," << dRyErr << "," << dRzErr << ","
+              << dxPull << "," << dyPull << "," << dzPull << ","
+              << dRxPull << "," << dRyPull << "," << dRzPull
+              << endl;
   }
   tree->Write();
   outPedefile.Close();
+  OutStream.close();
 
   // the end
 

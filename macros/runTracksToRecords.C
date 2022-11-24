@@ -1,9 +1,11 @@
 #if !defined(__CLING__) || defined(__ROOTCLING__)
 
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <sstream>
 
 #include <Rtypes.h>
 #include <ROOT/RDataFrame.hxx>
@@ -33,16 +35,22 @@ struct AlignConfigHelper {
 // .L ~/cernbox/alice/enigma/macros/runTracksToRecords.C++
 // runTracksToRecords()
 
-void runTracksToRecords(const Int_t fileStop = 10, // 4315,
+void runTracksToRecords(const Int_t fileStop = 4315, // 44,
                         const int minPoints = 6,
-                        const bool preferAlignedFile = true,
+                        const bool preferAlignedFile = false,
+                        const bool useMilleAlignment = true,
                         const bool doControl = true,
-                        const int nEntriesAutoSave = 5000)
+                        const int nEntriesAutoSave = 10000)
 {
+
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
   // geometry
+
+  ///< load geometry from file
+  ///< When applyMisalignedment == false --> read from unaligned file
+  ///< When preferAlignedFile == true and applyMisalignment == true : Prefer reading from existing aligned file
 
   const bool applyMisalignment = false;
   o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
@@ -68,7 +76,11 @@ void runTracksToRecords(const Int_t fileStop = 10, // 4315,
   std::string basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
   std::string alignStatus = "";
   if (preferAlignedFile || applyMisalignment) {
-    alignStatus = "prealigned";
+    if (useMilleAlignment) {
+      alignStatus = "reco-with-mille/pass1";
+    } else {
+      alignStatus = "prealigned";
+    }
   } else {
     alignStatus = "idealgeo";
   }
@@ -79,7 +91,39 @@ void runTracksToRecords(const Int_t fileStop = 10, // 4315,
   const Int_t fileStart = 1;
   TChain* mftclusterChain = new TChain("o2sim");
   TChain* mfttrackChain = new TChain("o2sim");
+  /*
+    static constexpr int nFiles = 28;
+    static constexpr std::array<int, nFiles> gridSubJob{
+      4, 6, 7, 10, 11, 12, 13, 14, 15, 16,
+      17, 18, 19, 20, 21, 22, 25, 26, 30, 32,
+      34, 35, 37, 38, 39, 42, 43, 44};
+    Int_t countFiles = 0;
+    for (const auto& ii : gridSubJob) {
+      if (countFiles > fileStop) {
+        break;
+      }
+      std::stringstream ss;
+      if (ii < 100) {
+        ss << generalPath << "/"
+           << std::setw(3) << std::setfill('0') << ii;
+      } else {
+        ss << generalPath << "/" << ii;
+      }
+      std::string filePath = ss.str();
+      mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+      mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
+      countFiles++;
+    }
+    */
   for (Int_t ii = fileStart; ii <= fileStop; ii++) {
+    if (preferAlignedFile && useMilleAlignment) {
+      if (ii == 2) { // missing sub directory
+        continue;
+      }
+      if (ii == 31) { // missing sub directory
+        continue;
+      }
+    }
     std::stringstream ss;
     if (ii < 100) {
       ss << generalPath << "/"
