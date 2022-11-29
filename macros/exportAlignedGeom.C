@@ -52,9 +52,9 @@ void exportAlignedGeom(std::string alignParamFileName = "mft_alignment.root")
 
     // generate aligned geometry file (o2sim_geometry-aligned.root)
     auto alignedgeomfile = o2::base::NameConf::getAlignedGeomFileName();
-    gGeoManager->Export(alignedgeomfile.c_str());
+    gGeoManager->Export(Form("new-%s", alignedgeomfile.c_str()));
     std::cout << "New geometry file generated : "
-              << alignedgeomfile.c_str()
+              << Form("new-%s", alignedgeomfile.c_str())
               << std::endl;
   }
 }
