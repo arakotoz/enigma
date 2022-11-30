@@ -1,20 +1,20 @@
 User = "arakotoz";
 JobTag = {
-  "comment:apply MFT pass1 alignment"
+  "comment:apply MFT pass2 alignment"
 };
 Packages = {
-  "VO_ALICE@O2PDPSuite::nightly-20221017-1"
+  "VO_ALICE@O2PDPSuite::nightly-20221129-1"
 };
 Executable = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/reco.sh";
 InputFile = {
-  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/ccdb/GLO/Config/GeometryAligned/pass1_o2sim_geometry-aligned.root",
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/ccdb/GLO/Config/GeometryAligned/pass2_o2sim_geometry-aligned.root",
   "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/ccdb/GLO/Config/GRPMAGFIELD/o2sim_grpMagField.root"
 };
 InputDataCollection = {
   "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2021/$2/$1/$1.xml,nodownload"
 };
 Split = "se";
-SplitMaxInputFileNumber = "100";
+SplitMaxInputFileNumber = "25";
 SplitArguments = "wn.xml";
 InputDataListFormat = "xml-single";
 InputDataList = "wn.xml";
