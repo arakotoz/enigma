@@ -1,0 +1,46 @@
+User = "arakotoz";
+JobTag = {
+  "comment:use MFT pass2 alignment on LHC22o"
+};
+Packages = {
+  "VO_ALICE@O2PDPSuite::nightly-20221129-1"
+};
+Executable = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2022/reco.sh";
+InputFile = {
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2022/ccdb/GLO/Config/GeometryAligned/pass2_o2sim_geometry-aligned.root"
+};
+InputDataCollection = {
+  "LF:/alice/cern.ch/user/a/arakotoz/mft/commissioning/2022/$2/$1/$1.xml,nodownload"
+};
+Split = "se";
+SplitMaxInputFileNumber = "5";
+SplitArguments = "wn.xml";
+InputDataListFormat = "xml-single";
+InputDataList = "wn.xml";
+#
+ValidationCommand = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2022/reco_validation.sh";
+OutputDir = "/alice/cern.ch/user/a/arakotoz/mft/commissioning/2022/$2/$1/output/#alien_counter_03i#";
+Output = {
+  "log_archive.zip:*.log,*mergerlog*,*serverlog*,*workerlog*,std*@disk=1",
+  "root_archive.zip:MFTAssessment.root,mfttracks.root,mftclusters.root@disk=2"
+};
+
+OutputErrorE = {
+"log_archive.zip:*.log,std*@disk=2"
+};
+
+#Requirements = member(other.GridPartitions,"multicore_8");
+ 
+TTL = $3;
+Price = 2;
+#MemorySize = "32GB";
+#WorkDirectorySize = {
+#  "5000MB"
+#};
+JDLVariables = {
+  "Packages",
+  "OutputDir",
+  "CPUCores"
+};
+CPUCores = "1";
+Type = "Job";
