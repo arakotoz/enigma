@@ -21,282 +21,127 @@
 
 #include "MFTAlignment/AlignSensorHelper.h"
 
+#include "helperGeom.h"
+
 #endif
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/exploreGeom.C++
 // exploreGeom()
 
-std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName);
-
-void printAlignParam(std::string alignParamFileName,
-                     std::vector<o2::detectors::AlignParam> alignParameters,
-                     bool printScreen = false,
-                     bool wTranslation = true,
-                     bool wRotation = true,
-                     bool wDeg = false);
-
-void printSensorGlobalTransform(o2::mft::AlignSensorHelper chipHelper,
-                                bool wSymName = true,
-                                bool wTranslation = true,
-                                bool wRotation = true,
-                                bool wDeg = true);
-
 //_________________________________
-void exploreGeom(std::string alignParamFileName1 = "mftprealignment",
-                 std::string alignParamFileName2 = "pass1_mft_alignment",
-                 const bool wCombinedAlignParams = true,
-                 const bool wAllSensors = true)
+void exploreGeom(std::string alignParamFileName = "pass1_mft_alignment",
+                 std::string OutAlignParamFileName = "pass1_wrt_ideal_mft_alignment")
 {
 
-  // load ideal geometry (o2sim_geometry.root)
+  // load prealigned geometry (o2sim_geometry-aligned.root)
 
   const bool applyMisalignment = false;
-  const bool preferAlignedFile = false;
+  const bool preferAlignedFile = true;
   o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
   o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();
 
-  // load alignement parameters from first file
+  // load pass1 alignement parameters w.r.t prealigned geometry
 
-  auto alignParameters1 = loadAlignParam(alignParamFileName1);
-  printAlignParam(alignParamFileName1, alignParameters1);
+  std::vector<o2::detectors::AlignParam> alignParameters = loadAlignParam(alignParamFileName);
+  printAlignParam(alignParamFileName, alignParameters);
 
-  // load alignement parameters from second file
+  // compute pass 1 alignment parameters w.r.t. ideal geometry
 
-  auto alignParameters2 = loadAlignParam(alignParamFileName2);
-  printAlignParam(alignParamFileName2, alignParameters2);
-
-  if (wCombinedAlignParams) { // combine alignment parameters
-
-    std::vector<o2::detectors::AlignParam> outAlignParams;
-
-    o2::mft::AlignSensorHelper chipHelper;
-    double dRx = 0., dRy = 0., dRz = 0.; // delta rotations
-    double dx = 0., dy = 0., dz = 0.;    // delta translations
-    bool global = true;                  // delta in global ref. system
-
-    // mapping
-
-    o2::itsmft::ChipMappingMFT chipMappingMFT;
-    const int numberOfSensors = o2::itsmft::ChipMappingMFT::NChips;
-
-    // add alignment parameters (global delta)
-
-    for (int chipId = 0; chipId < numberOfSensors; chipId++) {
-      chipHelper.setSensorOnlyInfo(chipId);
-      dx = alignParameters1[chipId].getX() + alignParameters2[chipId].getX();
-      dy = alignParameters1[chipId].getY() + alignParameters2[chipId].getY();
-      dz = alignParameters1[chipId].getZ() + alignParameters2[chipId].getZ();
-      dRx = alignParameters1[chipId].getPsi() + alignParameters2[chipId].getPsi();
-      dRy = alignParameters1[chipId].getTheta() + alignParameters2[chipId].getTheta();
-      dRz = alignParameters1[chipId].getPhi() + alignParameters2[chipId].getPhi();
-
-      outAlignParams.emplace_back(
-        chipHelper.geoSymbolicName(),
-        chipHelper.sensorUid(),
-        dx, dy, dz,
-        dRx, dRy, dRz,
-        global);
-    }
-
-    // print and save combined alignment parameters
-
-    std::string OutAlignParamFileName = "combined_prealigned_and_pass1_mft_alignment";
-    printAlignParam(OutAlignParamFileName, outAlignParams);
-    LOGF(info, "Storing *combined* MFT alignment params in local file %s.root",
-         OutAlignParamFileName.c_str());
-    TFile outAlignParamFile(Form("%s.root", OutAlignParamFileName.c_str()),
-                            "recreate", "", 505);
-    outAlignParamFile.WriteObjectAny(&outAlignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
-    outAlignParamFile.Close();
-
-    // apply the new set of alignment parameters
-
-    bool isAlignApplied = o2::base::GeometryManager::applyAlignment(outAlignParams);
-    if (isAlignApplied) {
-      LOG(info) << "Successfully applied *combined* alignment parameters from "
-                << alignParamFileName1 << ".root + "
-                << alignParamFileName2 << ".root";
-    }
-
-  } else {
-
-    // apply alignment parameters from first file
-
-    bool isAlignApplied1 = o2::base::GeometryManager::applyAlignment(alignParameters1);
-    if (isAlignApplied1) {
-      LOG(info) << "Successfully applied alignment parameters from "
-                << alignParamFileName1 << ".root";
-    }
-
-    // apply alignment parameters from second file
-
-    bool isAlignApplied2 = o2::base::GeometryManager::applyAlignment(alignParameters1);
-    if (isAlignApplied2) {
-      LOG(info) << "Successfully applied alignment parameters from "
-                << alignParamFileName2 << ".root";
-    }
-  }
-
-  // generate aligned geometry file (o2sim_geometry-aligned.root)
-
-  auto alignedgeomfile = o2::base::NameConf::getAlignedGeomFileName();
-  gGeoManager->Export(Form("new-%s", alignedgeomfile.c_str()));
-  LOG(info) << "New geometry file generated : "
-            << Form("new-%s", alignedgeomfile.c_str());
-
-  // options to be used when printing the global transformations in the new geometry
-
-  const bool wSymName = true;
-  const bool wTranslation = true;
-  const bool wRotation = true;
-  const bool wDeg = true;
-
-  // cache matrix elements in the geometry
-
-  geom->fillMatrixCache(
-    o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L,
-                             o2::math_utils::TransformType::L2G));
-
-  // mapping
-
-  o2::itsmft::ChipMappingMFT chipMappingMFT;
-
-  int NChips = o2::itsmft::ChipMappingMFT::NChips;
-  if (!wAllSensors) {
-    NChips = 10;
-  }
-
-  // print global transformations in the new geometry for a given sensor
+  std::vector<o2::detectors::AlignParam> outAlignParams;
 
   o2::mft::AlignSensorHelper chipHelper;
-  for (int iChip = 0; iChip < NChips; iChip++) {
-    chipHelper.setSensor(iChip);
-    printSensorGlobalTransform(chipHelper, wSymName, wTranslation, wRotation, wDeg);
-  }
-}
+  double dRx = 0., dRy = 0., dRz = 0.; // delta rotations
+  double dx = 0., dy = 0., dz = 0.;    // delta translations
+  bool global = true;                  // delta in global ref. system
 
-//_________________________________
-std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName)
-{
-  if (alignParamFileName.empty()) {
-    LOG(fatal) << "No input align params file name provided !";
-    throw std::exception();
-  }
-  LOG(info) << "Loading alignment parameters from " << alignParamFileName << ".root";
-  TFile algFile(Form("%s.root", alignParamFileName.c_str()));
-  if (algFile.IsZombie()) {
-    LOG(fatal) << "Bad align param file " << alignParamFileName << ".root";
-    throw std::exception();
-  }
-  auto alignment = algFile.Get<std::vector<o2::detectors::AlignParam>>("alignment");
-  algFile.Close();
-  if (!alignment) {
-    LOG(fatal) << "Empty vector of align params !";
-    throw std::exception();
-  }
-  std::vector<o2::detectors::AlignParam> alignParameters = *alignment;
-  return alignParameters;
-}
-
-//_________________________________
-void printAlignParam(std::string alignParamFileName,
-                     std::vector<o2::detectors::AlignParam> alignParameters,
-                     bool printScreen,
-                     bool wTranslation,
-                     bool wRotation,
-                     bool wDeg)
-{
   o2::itsmft::ChipMappingMFT chipMappingMFT;
-  int NChips = o2::itsmft::ChipMappingMFT::NChips;
+  const int numberOfSensors = o2::itsmft::ChipMappingMFT::NChips;
 
-  std::ofstream OutStream;
-  OutStream.open(Form("%s.csv", alignParamFileName.c_str()));
-  OutStream << "half,disk,layer,zone,con,tr,chipid,dx,dy,dz,dRx,dRy,dRz" << endl;
+  for (int chipId = 0; chipId < numberOfSensors; chipId++) {
 
-  o2::mft::AlignSensorHelper chipHelper;
+    chipHelper.setSensorOnlyInfo(chipId);
+    dx = alignParameters[chipId].getX();
+    dy = alignParameters[chipId].getY();
+    dz = alignParameters[chipId].getZ();
+    dRx = alignParameters[chipId].getPsi();
+    dRy = alignParameters[chipId].getTheta();
+    dRz = alignParameters[chipId].getPhi();
 
-  double dx = 0., dy = 0., dz = 0., dRx = 0., dRy = 0., dRz = 0.;
+    TGeoHMatrix alignParamMatrix = [](auto dx, auto dy, auto dz, auto dRx, auto dRy, auto dRz) {
+      TGeoHMatrix tmp;
+      double tra[3] = {dx, dy, dz};
+      tmp.SetTranslation(tra);
+      double rot[9] = {};
+      double sinpsi = std::sin(dRx);
+      double cospsi = std::cos(dRx);
+      double sinthe = std::sin(dRy);
+      double costhe = std::cos(dRy);
+      double sinphi = std::sin(dRz);
+      double cosphi = std::cos(dRz);
+      rot[0] = costhe * cosphi;
+      rot[1] = -costhe * sinphi;
+      rot[2] = sinthe;
+      rot[3] = sinpsi * sinthe * cosphi + cospsi * sinphi;
+      rot[4] = -sinpsi * sinthe * sinphi + cospsi * cosphi;
+      rot[5] = -costhe * sinpsi;
+      rot[6] = -cospsi * sinthe * cosphi + sinpsi * sinphi;
+      rot[7] = cospsi * sinthe * sinphi + sinpsi * cosphi;
+      rot[8] = costhe * cospsi;
+      tmp.SetRotation(rot);
+      return tmp;
+    }(dx, dy, dz, dRx, dRy, dRz);
 
-  for (int iChip = 0; iChip < NChips; iChip++) {
+    TGeoHMatrix idealGlobalTransform, idealGlobalTransformInv;
+    o2::base::GeometryManager::getOriginalMatrix(
+      o2::detectors::DetID::MFT, chipId, idealGlobalTransform);
+    idealGlobalTransformInv = idealGlobalTransform.Inverse();
 
-    chipHelper.setSensorOnlyInfo(iChip);
-    dx = alignParameters[iChip].getX();
-    dy = alignParameters[iChip].getY();
-    dz = alignParameters[iChip].getZ();
-    dRx = alignParameters[iChip].getPsi();
-    dRy = alignParameters[iChip].getTheta();
-    dRz = alignParameters[iChip].getPhi();
+    geom->fillMatrixCache(
+      o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L,
+                               o2::math_utils::TransformType::L2G));
+    TGeoHMatrix prealignedGlobalTransform = geom->getMatrixL2G(chipId);
 
-    OutStream << chipHelper.half() << ","
-              << chipHelper.disk() << ","
-              << chipHelper.layer() << ","
-              << chipHelper.zone() << ","
-              << chipHelper.connector() << ","
-              << chipHelper.transceiver() << ","
-              << iChip << ","
-              << dx << "," << dy << "," << dz << ","
-              << dRx << "," << dRy << "," << dRz
-              << endl;
+    TGeoHMatrix new_matrix;
 
-    if (printScreen) {
-      std::streamsize ss = std::cout.precision();
-      bool wSymName = true;
-      std::stringstream name = chipHelper.getSensorFullName(wSymName);
-      std::cout << name.str().c_str()
-                << " (" << alignParameters[iChip].getSymName() << ") ";
-      if (wTranslation) {
-        std::cout << std::scientific << std::setprecision(2)
-                  << " (cm) dx " << dx
-                  << " dy " << dy
-                  << " dz " << dz;
-      }
-      if (wRotation) {
-        constexpr double rad2deg = 180.0 / 3.14159265358979323846;
-        if (wDeg) {
-          dRx *= rad2deg;
-          dRy *= rad2deg;
-          dRz *= rad2deg;
-          std::cout << " (deg)";
-        }
-        std::cout << std::scientific << std::setprecision(2)
-                  << " dRx " << dRx << " dRy " << dRy << " dRz " << dRz;
-      }
-      std::cout << std::setprecision(ss) << std::endl;
-    }
+    // copy pass 1 w.r.t. prealigned
+
+    new_matrix.SetTranslation(alignParamMatrix.GetTranslation());
+    new_matrix.SetRotation(alignParamMatrix.GetRotationMatrix());
+
+    // compute pass 1 w.r.t. ideal
+
+    new_matrix.Multiply(&prealignedGlobalTransform);
+    new_matrix.Multiply(&idealGlobalTransformInv);
+
+    Double_t* tra = new_matrix.GetTranslation();
+    dx = tra[0];
+    dy = tra[1];
+    dz = tra[2];
+
+    Double_t* rot = new_matrix.GetRotationMatrix();
+    dRx = std::atan2(-rot[5], rot[8]);
+    dRy = std::asin(rot[2]);
+    dRz = std::atan2(-rot[1], rot[0]);
+
+    // store pass 1 w.r.t. ideal
+
+    outAlignParams.emplace_back(
+      chipHelper.geoSymbolicName(),
+      chipHelper.sensorUid(),
+      dx, dy, dz,
+      dRx, dRy, dRz,
+      global);
   }
-  OutStream.close();
-}
 
-//_________________________________
-void printSensorGlobalTransform(o2::mft::AlignSensorHelper chipHelper,
-                                bool wSymName,
-                                bool wTranslation,
-                                bool wRotation,
-                                bool wDeg)
-{
-  std::streamsize ss = std::cout.precision();
-  std::stringstream name = chipHelper.getSensorFullName(wSymName);
-  std::cout << name.str().c_str();
-  if (wTranslation) {
-    std::cout << std::scientific << std::setprecision(2)
-              << " (cm) dx " << chipHelper.translateX()
-              << " dy " << chipHelper.translateY()
-              << " dz " << chipHelper.translateZ();
-  }
-  if (wRotation) {
-    constexpr double rad2deg = 180.0 / 3.14159265358979323846;
-    double rotX = chipHelper.angleRx();
-    double rotY = chipHelper.angleRy();
-    double rotZ = chipHelper.angleRz();
-    if (wDeg) {
-      rotX *= rad2deg;
-      rotY *= rad2deg;
-      rotZ *= rad2deg;
-      std::cout << " (deg)";
-    }
-    std::cout << std::scientific << std::setprecision(2)
-              << " Rx " << rotX << " Ry " << rotY << " Rz " << rotZ;
-  }
-  std::cout << std::setprecision(ss) << std::endl;
+  LOGF(info, "Storing *combined* MFT alignment params in local file %s.root",
+       OutAlignParamFileName.c_str());
+  TFile outAlignParamFile(Form("%s.root", OutAlignParamFileName.c_str()),
+                          "recreate", "", 505);
+  outAlignParamFile.WriteObjectAny(&outAlignParams,
+                                   "std::vector<o2::detectors::AlignParam>",
+                                   "alignment");
+  outAlignParamFile.Close();
+
+  printAlignParam(OutAlignParamFileName, outAlignParams);
 }
