@@ -14,7 +14,7 @@ echo ""
 
 localCcdbBaseDir="${currentDir}/ccdb"
 
-geomFilenameAligned="pass2_o2sim_geometry-aligned.root"
+geomFilenameAligned="new-pass1_o2sim_geometry-aligned.root"
 if [ ! -e "${geomFilenameAligned}" ]; then
     echo "Cannot find $geomFilenameAligned, exit"
     exit 1
