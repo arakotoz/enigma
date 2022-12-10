@@ -5,6 +5,7 @@
 Alignment parameters were computed w.r.t. a given geometry:
 
 corrections (align params) | w.r.t geometry
+-------------------------- | ---------------
 `mftprealignment.root` | `o2sim_geometry.root`
 `pass1_mft_alignment.root` | `o2sim_geometry-prealigned.root`
 `pass1_wrt_ideal_mft_alignment.root` | `o2sim_geometry.root`
