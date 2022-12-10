@@ -1,13 +1,20 @@
-# Description of the files
+# Description of the ROOT files
 
-## Align params
+## Align params files
 
-- `mftprealignment.root`
-- `pass1_mft_alignment.root`
-- `pass1b_mft_alignment.root`
-- `pass2_mft_alignment.root`
+Alignment parameters were computed w.r.t. a given geometry:
 
-## Geometry
+corrections (align params) | w.r.t geometry
+`mftprealignment.root` | `o2sim_geometry.root`
+`pass1_mft_alignment.root` | `o2sim_geometry-prealigned.root`
+`pass1_wrt_ideal_mft_alignment.root` | `o2sim_geometry.root`
+`pass1b_mft_alignment.root` | `pass1_o2sim_geometry-aligned.root`
+`pass2_mft_alignment.root` | `o2sim_geometry.root`
+
+`pass1_wrt_ideal_mft_alignment.root` was obtained by convoluting the pre-alignment parameters `mftprealignment.root` with alignment parameters from MillePede `pass1_mft_alignment.root`, using the macro `exploreGeom.C` .
+## Geometry files
+
+Alignment parameters were computed w.r.t initial geometry and integrated into the final geometry:
 
 initial geometry | corrections (align params) | final geometry
  ---------------- | -------------------------- | ---------------
@@ -15,18 +22,20 @@ initial geometry | corrections (align params) | final geometry
  `o2sim_geometry-prealigned.root` | `pass1_mft_alignment.root` | `pass1_o2sim_geometry-aligned.root`
  `pass1_o2sim_geometry-aligned.root` | `pass1b_mft_alignment.root` | `pass1b_o2sim_geometry-aligned.root`
  `o2sim_geometry.root` | `pass2_mft_alignment.root` | `pass2_o2sim_geometry-aligned.root`
+ `o2sim_geometry.root`| `pass1_wrt_ideal_mft_alignment.root` | `new-pass1_o2sim_geometry-aligned.root`
 
-### Ideal
+### Ideal geometry file
 
 - `o2sim_geometry.root`
 
-### Pre-alignment
+### Pre-aligned geometry file
 
 - `o2sim_geometry-prealigned.root`
 
-### Tests of Millipede
+### Aligned geometry files from tests of Millipede
 
 - `pass1_o2sim_geometry-aligned.root`
+- `new-pass1_o2sim_geometry-aligned.root`
 - `pass1b_o2sim_geometry-aligned.root`
 - `pass2_o2sim_geometry-aligned.root`
 
