@@ -75,7 +75,7 @@ class Hit
       std::vector<unsigned char>::iterator& pattIt,
       o2::mft::GeometryTGeo* geom,
       o2::itsmft::ChipMappingMFT chipMappingMFT,
-      o2::itsmft::TopologyDictionary& dict,
+      o2::itsmft::TopologyDictionary* dict,
       const UInt_t rof = 0);
 
   // convert a compact cluster to 3D spacepoint stored into a Hit
@@ -84,7 +84,7 @@ class Hit
                              std::vector<unsigned char>::iterator& pattIt,
                              o2::mft::GeometryTGeo* geom,
                              o2::itsmft::ChipMappingMFT chipMappingMFT,
-                             o2::itsmft::TopologyDictionary& dict);
+                             o2::itsmft::TopologyDictionary* dict);
 
   // short-named getters
 
@@ -405,7 +405,7 @@ Hit::Hit(o2::itsmft::CompClusterExt cluster,
          std::vector<unsigned char>::iterator& pattIt,
          o2::mft::GeometryTGeo* geom,
          o2::itsmft::ChipMappingMFT chipMappingMFT,
-         o2::itsmft::TopologyDictionary& dict,
+         o2::itsmft::TopologyDictionary* dict,
          const UInt_t rof)
   : mRofIdx(rof),
     mBc(0),
@@ -554,7 +554,7 @@ void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
                                 std::vector<unsigned char>::iterator& pattIt,
                                 o2::mft::GeometryTGeo* geom,
                                 o2::itsmft::ChipMappingMFT chipMappingMFT,
-                                o2::itsmft::TopologyDictionary& dict)
+                                o2::itsmft::TopologyDictionary* dict)
 {
   /// convert a compact cluster to 3D spacepoint stored into a Hit
   // lines from Detectors/ITSMFT/MFT/tracking/src/IOUtils.cxx
@@ -566,19 +566,20 @@ void Hit::convertCompactCluster(o2::itsmft::CompClusterExt c,
   double sigmaY2 = o2::mft::ioutils::DefClusError2Col;
   if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
     // ALPIDE local Y coordinate => MFT global X coordinate (ALPIDE rows)
-    sigmaX2 = dict.getErr2X(pattID);
+    sigmaX2 = dict->getErr2X(pattID);
     // ALPIDE local Z coordinate => MFT global Y coordinate (ALPIDE columns)
-    sigmaY2 = dict.getErr2Z(pattID);
-    if (!dict.isGroup(pattID)) {
-      locXYZ = dict.getClusterCoordinates(c);
+    sigmaY2 = dict->getErr2Z(pattID);
+    if (!dict->isGroup(pattID)) {
+      locXYZ = dict->getClusterCoordinates(c);
     } else {
       o2::itsmft::ClusterPattern cPattern(pattIt);
-      locXYZ = dict.getClusterCoordinates(c, cPattern);
+      locXYZ = dict->getClusterCoordinates(c, cPattern);
     }
   } else {
     o2::itsmft::ClusterPattern cPattern(pattIt);
-    locXYZ = dict.getClusterCoordinates(c, cPattern, false);
+    locXYZ = dict->getClusterCoordinates(c, cPattern, false);
   }
+
   // Transformation local --> local prime coordinates
   setClusterPosition(mTransLprime2L.ApplyInverse(locXYZ), isLocal);
   // Transformation local --> global coordinates

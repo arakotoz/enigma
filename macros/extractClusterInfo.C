@@ -32,10 +32,18 @@
 // .L ~/cernbox/alice/enigma/macros/extractClusterInfo.C++
 // extractClusterInfo()
 
+// fileStop = 44 for reco-with-mille/old-ctf/pass1
+// fileStop = 4315 for prealigned/old-ctf
+// fileStop = 173 for reco-with-mille/old-ctf/pass2
+// fileStop = 819 for reco-with-mille/new-ctf/new-pass1
+// fileStop = 819 for prealigned/new-ctf
+
 void extractClusterInfo(const Bool_t doVerbosePrint = true,
                         const Int_t printPeriod = 10,
-                        const Int_t fileStop = 4315,
+                        const Int_t fileStop = 2,
                         const bool preferAlignedFile = true,
+                        const bool useMilleAlignment = true,
+                        const bool useNewCTFs = true,
                         const bool keepClustersInTracksOnly = true)
 {
   ROOT::EnableImplicitMT(0);
@@ -51,13 +59,17 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
   // dictionary
 
   std::string dictFileName = "MFTdictionary.bin";
-  std::ifstream dictFile(dictFileName.c_str());
-  if (!dictFile.good()) {
-    std::cout << "Error: MFT dictionnary file " << dictFileName << " not found!" << std::endl;
+  if (useNewCTFs) {
+    dictFileName = "o2_mft_dictionary.root";
+  }
+  o2::itsmft::TopologyDictionary* dict = nullptr;
+  try {
+    dict = o2::itsmft::TopologyDictionary::loadFrom(dictFileName);
+  } catch (std::exception e) {
+    std::cout << "Error " << e.what() << std::endl;
     return;
   }
-  o2::itsmft::TopologyDictionary dict;
-  dict.readBinaryFile(dictFileName);
+  dict->readFromFile(dictFileName);
 
   // mapping
 
@@ -65,18 +77,38 @@ void extractClusterInfo(const Bool_t doVerbosePrint = true,
 
   // cluster and track chains
 
-  std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/";
+  const int runN = 505713;
+  std::string basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
   std::string alignStatus = "";
   if (preferAlignedFile || applyMisalignment) {
-    alignStatus = "prealigned";
+    if (useMilleAlignment) {
+      if (useNewCTFs) {
+        alignStatus = "reco-with-mille/new-ctf/new-pass1";
+      } else {
+        alignStatus = "reco-with-mille/old-ctf/pass1";
+      }
+    } else {
+      if (useNewCTFs) {
+        alignStatus = "prealigned/new-ctf";
+      } else {
+        alignStatus = "prealigned/old-ctf";
+      }
+    }
   } else {
-    alignStatus = "idealgeo";
+    if (useMilleAlignment) {
+      alignStatus = "reco-with-mille/old-ctf/pass2";
+    } else {
+      alignStatus = "idealgeo/old-ctf";
+    }
   }
-  generalPath += alignStatus;
+  std::stringstream generalPathSs;
+  generalPathSs << basePath << "/" << runN << "/" << alignStatus;
+  std::string generalPath = generalPathSs.str();
 
   const Int_t fileStart = 1;
   TChain mftclusterChain("o2sim");
   TChain mfttrackChain("o2sim");
+
   for (Int_t ii = fileStart; ii <= fileStop; ii++) {
     std::stringstream ss;
     if (ii < 100) {
