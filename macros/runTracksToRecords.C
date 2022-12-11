@@ -35,10 +35,16 @@ struct AlignConfigHelper {
 // .L ~/cernbox/alice/enigma/macros/runTracksToRecords.C++
 // runTracksToRecords()
 
-void runTracksToRecords(const Int_t fileStop = 4315, // 44,
+// fileStop = 44 for reco-with-mille/old-ctf/pass1
+// fileStop = 4315 for prealigned/old-ctf
+// fileStop = 173 for reco-with-mille/old-ctf/pass2
+// fileStop = 819 for reco-with-mille/new-ctf/new-pass1
+// fileStop = 819 for prealigned/new-ctf
+void runTracksToRecords(const Int_t fileStop = 10,
                         const int minPoints = 6,
-                        const bool preferAlignedFile = false,
+                        const bool preferAlignedFile = true,
                         const bool useMilleAlignment = true,
+                        const bool useNewCTFs = true,
                         const bool doControl = true,
                         const int nEntriesAutoSave = 10000)
 {
@@ -62,13 +68,17 @@ void runTracksToRecords(const Int_t fileStop = 4315, // 44,
   // dictionary
 
   std::string dictFileName = "MFTdictionary.bin";
-  std::ifstream dictFile(dictFileName.c_str());
-  if (!dictFile.good()) {
-    std::cout << "Error: MFT dictionnary file " << dictFileName << " not found!" << std::endl;
+  if (useNewCTFs) {
+    dictFileName = "o2_mft_dictionary.root";
+  }
+  o2::itsmft::TopologyDictionary* dict = nullptr;
+  try {
+    dict = o2::itsmft::TopologyDictionary::loadFrom(dictFileName);
+  } catch (std::exception e) {
+    std::cout << "Error " << e.what() << std::endl;
     return;
   }
-  o2::itsmft::TopologyDictionary* dict = new o2::itsmft::TopologyDictionary();
-  dict->readBinaryFile(dictFileName);
+  dict->readFromFile(dictFileName);
 
   // cluster and track chains
 
@@ -77,12 +87,24 @@ void runTracksToRecords(const Int_t fileStop = 4315, // 44,
   std::string alignStatus = "";
   if (preferAlignedFile || applyMisalignment) {
     if (useMilleAlignment) {
-      alignStatus = "reco-with-mille/pass1";
+      if (useNewCTFs) {
+        alignStatus = "reco-with-mille/new-ctf/new-pass1";
+      } else {
+        alignStatus = "reco-with-mille/old-ctf/pass1";
+      }
     } else {
-      alignStatus = "prealigned";
+      if (useNewCTFs) {
+        alignStatus = "prealigned/new-ctf";
+      } else {
+        alignStatus = "prealigned/old-ctf";
+      }
     }
   } else {
-    alignStatus = "idealgeo";
+    if (useMilleAlignment) {
+      alignStatus = "reco-with-mille/old-ctf/pass2";
+    } else {
+      alignStatus = "idealgeo/old-ctf";
+    }
   }
   std::stringstream generalPathSs;
   generalPathSs << basePath << "/" << runN << "/" << alignStatus;
@@ -91,7 +113,9 @@ void runTracksToRecords(const Int_t fileStop = 4315, // 44,
   const Int_t fileStart = 1;
   TChain* mftclusterChain = new TChain("o2sim");
   TChain* mfttrackChain = new TChain("o2sim");
+
   /*
+    // This is for reco-with-mille/old-ctf/pass2
     static constexpr int nFiles = 28;
     static constexpr std::array<int, nFiles> gridSubJob{
       4, 6, 7, 10, 11, 12, 13, 14, 15, 16,
@@ -115,15 +139,8 @@ void runTracksToRecords(const Int_t fileStop = 4315, // 44,
       countFiles++;
     }
     */
+
   for (Int_t ii = fileStart; ii <= fileStop; ii++) {
-    if (preferAlignedFile && useMilleAlignment) {
-      if (ii == 2) { // missing sub directory
-        continue;
-      }
-      if (ii == 31) { // missing sub directory
-        continue;
-      }
-    }
     std::stringstream ss;
     if (ii < 100) {
       ss << generalPath << "/"
@@ -134,7 +151,10 @@ void runTracksToRecords(const Int_t fileStop = 4315, // 44,
     std::string filePath = ss.str();
     mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
     mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
+    LOG(debug) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+    LOG(debug) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
   }
+
   std::cout << "Number of files per chain = " << fileStop << std::endl;
 
   // instantiate and configure the aligner
