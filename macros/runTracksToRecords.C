@@ -40,7 +40,7 @@ struct AlignConfigHelper {
 // fileStop = 173 for reco-with-mille/old-ctf/pass2
 // fileStop = 819 for reco-with-mille/new-ctf/new-pass1
 // fileStop = 819 for prealigned/new-ctf
-void runTracksToRecords(const Int_t fileStop = 10,
+void runTracksToRecords(const Int_t fileStop = 819,
                         const int minPoints = 6,
                         const bool preferAlignedFile = true,
                         const bool useMilleAlignment = true,
