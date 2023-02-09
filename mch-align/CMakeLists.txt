@@ -10,7 +10,7 @@
 # or submit itself to any jurisdiction.
 
 add_subdirectory(Aligner)
-# if (BUILD_TESTING)
-# add_subdirectory(Test)
-# endif()
+if (BUILD_TESTING)
+add_subdirectory(Test)
+endif()
 

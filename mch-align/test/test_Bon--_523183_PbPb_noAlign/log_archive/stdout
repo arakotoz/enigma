@@ -1,0 +1,102 @@
+ARGS=stage1.xml mchtracks.root muontracks.root QC.root ; echo payload-2760278714
+FILES=mchtracks.root
+FILES=mchtracks.root muontracks.root QC.root
+file=mchtracks.root
+
+Processing merge.C+("__stage1.txt","mchtracks.root")...
+Connecting to AliEn...merging 50 files...
+file=muontracks.root
+
+Processing merge.C+("__stage1.txt","muontracks.root")...
+Connecting to AliEn...merging 50 files...
+file=QC.root
+2022-12-07 11:54:19.770317     Facility set to runFileMerger
+2022-12-07 11:54:19.770515     Connecting to alien
+2022-12-07 11:54:20.928162     Output file 'QC.root' successfully open.
+2022-12-07 11:54:22.346261     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/001/QC.root' successfully open.
+2022-12-07 11:54:22.698931     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/002/QC.root' successfully open.
+2022-12-07 11:54:22.900799     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/003/QC.root' successfully open.
+2022-12-07 11:54:23.098113     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/004/QC.root' successfully open.
+2022-12-07 11:54:23.310324     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/005/QC.root' successfully open.
+2022-12-07 11:54:23.626363     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/006/QC.root' successfully open.
+2022-12-07 11:54:23.823521     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/007/QC.root' successfully open.
+2022-12-07 11:54:24.021960     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/008/QC.root' successfully open.
+2022-12-07 11:54:24.234542     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/009/QC.root' successfully open.
+2022-12-07 11:54:24.443652     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/010/QC.root' successfully open.
+2022-12-07 11:54:24.638625     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/011/QC.root' successfully open.
+2022-12-07 11:54:24.912698     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/012/QC.root' successfully open.
+2022-12-07 11:54:25.115852     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/013/QC.root' successfully open.
+2022-12-07 11:54:25.327165     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/014/QC.root' successfully open.
+2022-12-07 11:54:25.549212     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/015/QC.root' successfully open.
+2022-12-07 11:54:25.750977     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/016/QC.root' successfully open.
+2022-12-07 11:54:25.967582     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/017/QC.root' successfully open.
+2022-12-07 11:54:26.280352     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/018/QC.root' successfully open.
+2022-12-07 11:54:26.484377     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/019/QC.root' successfully open.
+2022-12-07 11:54:26.699312     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/020/QC.root' successfully open.
+2022-12-07 11:54:26.915797     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/021/QC.root' successfully open.
+2022-12-07 11:54:27.140622     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/022/QC.root' successfully open.
+2022-12-07 11:54:27.351202     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/023/QC.root' successfully open.
+2022-12-07 11:54:27.574919     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/024/QC.root' successfully open.
+2022-12-07 11:54:27.892627     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/025/QC.root' successfully open.
+2022-12-07 11:54:28.121304     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/026/QC.root' successfully open.
+2022-12-07 11:54:28.342179     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/027/QC.root' successfully open.
+2022-12-07 11:54:28.565849     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/028/QC.root' successfully open.
+2022-12-07 11:54:28.790132     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/029/QC.root' successfully open.
+2022-12-07 11:54:29.018359     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/030/QC.root' successfully open.
+2022-12-07 11:54:29.253337     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/031/QC.root' successfully open.
+2022-12-07 11:54:29.576186     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/032/QC.root' successfully open.
+2022-12-07 11:54:29.811470     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/033/QC.root' successfully open.
+2022-12-07 11:54:30.066810     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/034/QC.root' successfully open.
+2022-12-07 11:54:30.309452     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/035/QC.root' successfully open.
+2022-12-07 11:54:30.548198     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/036/QC.root' successfully open.
+2022-12-07 11:54:30.799512     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/037/QC.root' successfully open.
+2022-12-07 11:54:31.031780     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/038/QC.root' successfully open.
+2022-12-07 11:54:31.576033     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/039/QC.root' successfully open.
+2022-12-07 11:54:31.938288     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/040/QC.root' successfully open.
+2022-12-07 11:54:32.167245     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/041/QC.root' successfully open.
+2022-12-07 11:54:32.412609     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/042/QC.root' successfully open.
+2022-12-07 11:54:32.663004     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/043/QC.root' successfully open.
+2022-12-07 11:54:33.098767     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/044/QC.root' successfully open.
+2022-12-07 11:54:33.346777     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/045/QC.root' successfully open.
+2022-12-07 11:54:33.625057     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/046/QC.root' successfully open.
+2022-12-07 11:54:33.860525     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/047/QC.root' successfully open.
+2022-12-07 11:54:34.098991     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/048/QC.root' successfully open.
+2022-12-07 11:54:34.336874     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/049/QC.root' successfully open.
+2022-12-07 11:54:34.596893     Input file 'alien:///alice/cern.ch/user/l/laphecet/run3/2022/LHC22m/minv0/523183/050/QC.root' successfully open.
+2022-12-07 11:54:34.630052     Successfully merged 50 files into one.
+*******************************************************
+* Automatically generated validation script           *
+* Time:    Wed Dec  7 11:54:34 CET 2022 
+* Dir:     /workdir
+* Workdir: /workdir
+* ----------------------------------------------------*
+total 2549728
+drwxr-xr-x.  3 alisgm53 z2       4096 Dec  7 11:54 .
+drwxr-xr-x. 19 alisgm53 z2        620 Dec  7 11:50 ..
+-rw-r--r--.  1 alisgm53 z2         91 Dec  7 11:54 .root_hist
+-rw-r--r--.  1 alisgm53 z2     162707 Dec  7 11:54 QC.root
+-rw-r--r--.  1 alisgm53 z2      78215 Dec  7 11:54 access_log
+-rw-------.  1 alisgm53 z2       1415 Dec  7 11:54 jobtoken12368381615811946372.pem
+-rw-------.  1 alisgm53 z2       1675 Dec  7 11:51 jobtoken14174439882238811289.pem
+-rw-------.  1 alisgm53 z2       1675 Dec  7 11:54 jobtoken3610048367037774644.pem
+-rw-------.  1 alisgm53 z2       1415 Dec  7 11:51 jobtoken4570032970117221634.pem
+-rw-r--r--.  1 alisgm53 z2        588 Dec  7 11:50 logging.properties
+-rw-r--r--.  1 alisgm53 z2 2586131766 Dec  7 11:54 mchtracks.root
+-rw-r--r--.  1 alisgm53 z2       1029 Jul 22 09:52 merge.C
+-rwxr--r--.  1 alisgm53 z2       1500 Dec  6 11:22 merge.sh
+-rw-r--r--.  1 alisgm53 z2       4066 Dec  7 11:51 merge_C.d
+-rwxr-xr-x.  1 alisgm53 z2      28504 Dec  7 11:53 merge_C.so
+-rw-r--r--.  1 alisgm53 z2        905 Dec  7 11:51 merge_C_ACLiC_dict_rdict.pcm
+-rw-r--r--.  1 alisgm53 z2   24341286 Dec  7 11:54 muontracks.root
+-rw-r--r--.  1 alisgm53 z2       4400 Dec  7 11:51 stage1.txt
+-rw-r--r--.  1 alisgm53 z2      27850 Dec  7 11:50 stage1.xml
+-rw-r--r--.  1 alisgm53 z2      22327 Dec  7 11:54 stderr
+-rw-r--r--.  1 alisgm53 z2       8103 Dec  7 11:54 stdout
+drwxr-xr-x.  3 alisgm53 z2        185 Dec  7 11:54 tmp
+-rwxr--r--.  1 alisgm53 z2       3601 Jul 22 09:50 validation.sh
+-rw-r--r--.  1 alisgm53 z2        692 Dec  7 11:50 wn.xml
+* ----------------------------------------------------*
+* ----------------   Job Validated  ------------------*
+* ----------------------------------------------------*
+*******************************************************
+/workdir

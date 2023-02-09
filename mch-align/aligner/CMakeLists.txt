@@ -10,37 +10,37 @@
 # or submit itself to any jurisdiction.
 
 o2_add_library(MCHAlign
-         SOURCES
-           src/Alignment.cxx
-	   src/AliMillePede2.cxx
-	   src/AliMillePedeRecord.cxx
-           src/AliMinResSolve.cxx
-	   src/AliMatrixSparse.cxx
-	   src/AliMatrixSq.cxx
-	   src/AliSymBDMatrix.cxx
-	   src/AliRectMatrix.cxx
-	   src/AliVectorSparse.cxx
-	   src/AliLog.cxx
-	   src/AliSymMatrix.cxx				           
-         PUBLIC_LINK_LIBRARIES
-           O2::MathUtils 
-	   O2::Align 
-	   O2::MCHTracking
-	   O2::MCHGeometryTransformer
-	   O2::MCHGeometryCreator
-	   O2::MCHGeometryTest)
+	SOURCES
+	  src/Alignment.cxx
+		src/AliMillePede2.cxx
+		src/AliMillePedeRecord.cxx
+	 	src/AliMinResSolve.cxx
+		src/AliMatrixSparse.cxx
+		src/AliMatrixSq.cxx
+		src/AliSymBDMatrix.cxx
+		src/AliRectMatrix.cxx
+		src/AliVectorSparse.cxx
+		src/AliSymMatrix.cxx				           
+	PUBLIC_LINK_LIBRARIES
+	  O2::MathUtils 
+		O2::Align 
+		O2::DataFormatsMCH
+		O2::MCHTracking
+		O2::MCHGeometryTransformer
+		O2::MCHGeometryCreator
+		O2::MCHGeometryTest)
 
 o2_target_root_dictionary(MCHAlign
-  HEADERS include/MCHAlign/Alignment.h
+  HEADERS 
+  	include/MCHAlign/Alignment.h
 	  include/MCHAlign/AliMillePede2.h
-          include/MCHAlign/AliMillePedeRecord.h
-          include/MCHAlign/AliMinResSolve.h
-          include/MCHAlign/AliMatrixSparse.h
+    include/MCHAlign/AliMillePedeRecord.h
+    include/MCHAlign/AliMinResSolve.h
+    include/MCHAlign/AliMatrixSparse.h
 	  include/MCHAlign/AliMatrixSq.h
-          include/MCHAlign/AliSymBDMatrix.h
+    include/MCHAlign/AliSymBDMatrix.h
 	  include/MCHAlign/AliRectMatrix.h
 	  include/MCHAlign/AliVectorSparse.h
-	  include/MCHAlign/AliLog.h
 	  include/MCHAlign/AliSymMatrix.h)
 
 # o2_add_executable(pedestal-decoding-workflow

@@ -18,6 +18,7 @@
 #define ALICEO2_MCH_ALIGNMENT
 
 #include <string>
+#include <vector>
 
 #include "Align/Millepede2Record.h"
 #include "Align/Mille.h"
@@ -30,7 +31,8 @@
 #include "MCHGeometryTransformer/Transformations.h"
 
 #include "MCHTracking/Track.h"
-#include "MCHTracking/Cluster.h"
+#include "DataFormatsMCH/Cluster.h"
+#include "DetectorsCommonDataFormats/AlignParam.h"
 
 #include <TFile.h>
 #include <TGeoMatrix.h>
@@ -59,7 +61,27 @@ class LocalTrackParam
   double fTrackZ = 0.0;
   double fTrackSlopeX = 0.0;
   double fTrackSlopeY = 0.0;
-}; //class LocalTrackParam
+}; // class LocalTrackParam
+
+/// local track residual, for tempoarary eval
+class LocalTrackClusterResidual
+{
+ public:
+  //* construction
+  LocalTrackClusterResidual() = default;
+  ~LocalTrackClusterResidual() = default;
+
+  // private:
+  //* y and z
+  int fClDetElem = 0.0;
+  int fClDetElemNumber = 0.0;
+  double fClusterX = 0.0;
+  double fClusterY = 0.0;
+  double fTrackX = 0.0;
+  double fTrackY = 0.0;
+  double fTrackSlopeX = 0.0;
+  double fTrackSlopeY = 0.0;
+}; // class LocalTrackClusterResidual
 
 class Alignment : public TObject
 {
@@ -180,10 +202,10 @@ class Alignment : public TObject
   void SetSigmaXY(Double_t sigmaX, Double_t sigmaY);
 
   /// Set geometry transformer
-  //void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
+  // void SetGeometryTransformer(AliMUONGeometryTransformer* transformer)
   //{
-  //   fTransform = transformer;
-  //}
+  //    fTransform = transformer;
+  // }
 
   //@}
 
@@ -273,9 +295,13 @@ class Alignment : public TObject
   /// get error on a given parameter
   Double_t GetParError(Int_t iPar) const;
 
-  // AliMUONGeometryTransformer* ReAlign(const AliMUONGeometryTransformer* transformer, const double* misAlignments, Bool_t verbose);
+  void ReAlign(std::vector<o2::detectors::AlignParam>& params, const double* misAlignments);
 
   void SetAlignmentResolution(const TClonesArray* misAlignArray, Int_t chId, Double_t chResX, Double_t chResY, Double_t deResX, Double_t deResY);
+
+  TTree* GetResTree(){
+    return fTTree;
+  }
 
  private:
   /// Not implemented
@@ -310,6 +336,8 @@ class Alignment : public TObject
   void LocalEquationY(const Double_t* r);
 
   TGeoCombiTrans DeltaTransform(const double* detElemMisAlignment) const;
+
+  bool isMatrixConvertedToAngles(const double* rot, double& psi, double& theta, double& phi) const;
 
   ///@name utilities
   //@{
@@ -411,7 +439,7 @@ class Alignment : public TObject
   /// Geometry transformation
   // AliMUONGeometryTransformer* fTransform;
   o2::mch::geo::TransformationCreator fTransformCreator;
-  //TGeoCombiTrans fGeoCombiTransInverse;
+  // TGeoCombiTrans fGeoCombiTransInverse;
 
   /// preform evaluation
   Bool_t fDoEvaluation;
@@ -420,14 +448,16 @@ class Alignment : public TObject
   LocalTrackParam* fTrackParamOrig;
   LocalTrackParam* fTrackParamNew;
 
+  LocalTrackClusterResidual* fTrkClRes;
+
   /// output TFile
   TFile* fTFile;
 
   /// output TTree
   TTree* fTTree;
 
-}; //class Alignment
+}; // class Alignment
 
-} //namespace mch
-} //namespace o2
+} // namespace mch
+} // namespace o2
 #endif // ALICEO2_MCH_ALIGNMENT_H_

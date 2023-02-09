@@ -25,10 +25,11 @@
 #include "MCHAlign/AliMillePede2.h"
 #include "MCHAlign/AliMillePedeRecord.h"
 #include <iostream>
+#include <ctime>
 
 #include "MCHTracking/Track.h"
 #include "MCHTracking/TrackParam.h"
-#include "MCHTracking/Cluster.h"
+#include "DataFormatsMCH/Cluster.h"
 #include "TGeoManager.h"
 
 // #include "DataFormatsMCH/ROFRecord.h"
@@ -45,7 +46,7 @@
 #include "MCHGeometryTransformer/Transformations.h"
 #include "TGeoManager.h"
 
-// #include "Align/Millepede2Record.h" //to be replaced 
+// #include "Align/Millepede2Record.h" //to be replaced
 // #include "AliMpExMap.h"
 // #include "AliMpExMapIterator.h"
 
@@ -144,8 +145,8 @@ Alignment::Alignment()
     fRunNumber(0),
     fBFieldOn(kFALSE),
     fRefitStraightTracks(kFALSE),
-    fStartFac(256),
-    fResCutInitial(100),
+    fStartFac(65536),
+    fResCutInitial(1000),
     fResCut(100),
     fMillepede(0L), // to be modified
     fCluster(0L),
@@ -153,10 +154,11 @@ Alignment::Alignment()
     fDetElemNumber(0),
     fTrackRecord(),
     fTransformCreator(),
-    //fGeoCombiTransInverse(),
+    // fGeoCombiTransInverse(),
     fDoEvaluation(kFALSE),
     fTrackParamOrig(0),
     fTrackParamNew(0),
+    fTrkClRes(0),
     fTFile(0),
     fTTree(0)
 {
@@ -191,11 +193,11 @@ Alignment::Alignment()
 }
 
 //_____________________________________________________________________
-//Alignment::~Alignment()
+// Alignment::~Alignment()
 //{
 //  /// destructor
 //}
-//Alignment::~Alignment() = default;
+// Alignment::~Alignment() = default;
 //_____________________________________________________________________
 void Alignment::init(std::string DataRecFName, std::string ConsRecFName)
 {
@@ -245,9 +247,9 @@ void Alignment::init(std::string DataRecFName, std::string ConsRecFName)
 
   LOG(info) << "Free Parameters: " << nGlobal << " out of " << fNGlobal;
 
-  // initialize millepede
-  // fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial, fGlobalParameterStatus);
-  fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial); // AliMillePede2 implementation
+  // initialize millepedes
+  fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial, fGlobalParameterStatus);
+  // fMillepede->InitMille(fNGlobal, fNLocal, fNStdDev, fResCut, fResCutInitial); // AliMillePede2 implementation
   // fMillepede->InitDataRecStorage(kFALSE);
   fMillepede->SetDataRecFName(DataRecFName);
   fMillepede->SetConsRecFName(ConsRecFName);
@@ -267,23 +269,29 @@ void Alignment::init(std::string DataRecFName, std::string ConsRecFName)
   }
 
   // Set iterations
-  if (fStartFac > 1){
+  if (fStartFac > 1) {
     fMillepede->SetIterations(fStartFac);
   }
-    // setup monitoring TFile
-    if (fDoEvaluation && fRefitStraightTracks) {
-      fTFile = new TFile("Alignment.root", "RECREATE");
-      fTTree = new TTree("TreeE", "Evaluation");
+  // setup monitoring TFile
+  if (fDoEvaluation) {
+    // if (fDoEvaluation && fRefitStraightTracks) {
+    string Path_file = Form("%s%s","ResRecord",".root");
 
-      const Int_t kSplitlevel = 98;
-      const Int_t kBufsize = 32000;
+    fTFile = new TFile(Path_file.c_str(), "RECREATE");
+    fTTree = new TTree("TreeE", "Evaluation");
 
-      fTrackParamOrig = new LocalTrackParam();
-      fTTree->Branch("fTrackParamOrig", "LocalTrackParam", &fTrackParamOrig, kBufsize, kSplitlevel);
+    const Int_t kSplitlevel = 98;
+    const Int_t kBufsize = 32000;
 
-      fTrackParamNew = new LocalTrackParam();
-      fTTree->Branch("fTrackParamNew", "LocalTrackParam", &fTrackParamNew, kBufsize, kSplitlevel);
-    }
+    // fTrackParamOrig = new LocalTrackParam();
+    // fTTree->Branch("fTrackParamOrig", "LocalTrackParam", &fTrackParamOrig, kBufsize, kSplitlevel);
+
+    // fTrackParamNew = new LocalTrackParam();
+    // fTTree->Branch("fTrackParamNew", "LocalTrackParam", &fTrackParamNew, kBufsize, kSplitlevel);
+
+    fTrkClRes = new o2::mch::LocalTrackClusterResidual();
+    fTTree->Branch("fTrkClRes", &fTrkClRes, kBufsize, kSplitlevel);
+  }
 }
 
 //_____________________________________________________
@@ -302,7 +310,7 @@ void Alignment::terminate(void)
 //_____________________________________________________
 AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::TransformationCreator& transformation, Bool_t doAlignment, Double_t weight)
 {
-  
+
   /// process track for alignment minimization
   /**
   returns the alignment records for this track.
@@ -313,8 +321,8 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::Tr
 
   // reset track records
   fTrackRecord.Reset();
-  if (fMillepede->GetRecord()){
-     fMillepede->GetRecord()->Reset();
+  if (fMillepede->GetRecord()) {
+    fMillepede->GetRecord()->Reset();
   }
 
   // loop over clusters to get starting values
@@ -328,8 +336,8 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::Tr
     const Cluster* cluster = itTrackParam->getClusterPtr();
     if (!cluster)
       continue;
-    //cout << "current cluster's detector ID: " << cluster->getDEId() <<endl;
-    // for first valid cluster, save track position as "starting" values
+    // cout << "current cluster's detector ID: " << cluster->getDEId() <<endl;
+    //  for first valid cluster, save track position as "starting" values
     if (first) {
 
       first = kFALSE;
@@ -351,25 +359,25 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::Tr
     const LocalTrackParam trackParam(RefitStraightTrack(track, fTrackPos0[2]));
 
     // fill evaluation tree
-    if (fTrackParamOrig) {
-      fTrackParamOrig->fTrackX = fTrackPos0[0];
-      fTrackParamOrig->fTrackY = fTrackPos0[1];
-      fTrackParamOrig->fTrackZ = fTrackPos0[2];
-      fTrackParamOrig->fTrackSlopeX = fTrackSlope[0];
-      fTrackParamOrig->fTrackSlopeY = fTrackSlope[1];
-    }
+    // if (fTrackParamOrig) {
+    //   fTrackParamOrig->fTrackX = fTrackPos0[0];
+    //   fTrackParamOrig->fTrackY = fTrackPos0[1];
+    //   fTrackParamOrig->fTrackZ = fTrackPos0[2];
+    //   fTrackParamOrig->fTrackSlopeX = fTrackSlope0[0];
+    //   fTrackParamOrig->fTrackSlopeY = fTrackSlope0[1];
+    // }
 
-    // new ones
-    if (fTrackParamNew) {
-      fTrackParamNew->fTrackX = trackParam.fTrackX;
-      fTrackParamNew->fTrackY = trackParam.fTrackY;
-      fTrackParamNew->fTrackZ = trackParam.fTrackZ;
-      fTrackParamNew->fTrackSlopeX = trackParam.fTrackSlopeX;
-      fTrackParamNew->fTrackSlopeY = trackParam.fTrackSlopeY;
-    }
+    // // new ones
+    // if (fTrackParamNew) {
+    //   fTrackParamNew->fTrackX = trackParam.fTrackX;
+    //   fTrackParamNew->fTrackY = trackParam.fTrackY;
+    //   fTrackParamNew->fTrackZ = trackParam.fTrackZ;
+    //   fTrackParamNew->fTrackSlopeX = trackParam.fTrackSlopeX;
+    //   fTrackParamNew->fTrackSlopeY = trackParam.fTrackSlopeY;
+    // }
 
-    if (fTTree)
-      fTTree->Fill();
+    // if (fTTree)
+    //   fTTree->Fill();
 
     /*
     copy new parameters to stored ones for derivatives calculation
@@ -379,8 +387,8 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::Tr
       fTrackPos0[0] = trackParam.fTrackX;
       fTrackPos0[1] = trackParam.fTrackY;
       fTrackPos0[2] = trackParam.fTrackZ;
-      fTrackSlope[0] = trackParam.fTrackSlopeX;
-      fTrackSlope[1] = trackParam.fTrackSlopeY;
+      fTrackSlope0[0] = trackParam.fTrackSlopeX;
+      fTrackSlope0[1] = trackParam.fTrackSlopeY;
     }
   }
 
@@ -398,45 +406,66 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::Tr
       continue;
 
     // fill local variables for this position --> one measurement
-    
-    // FillDetElemData(cluster); // function to get the transformation matrix
-    
+
+    FillDetElemData(cluster); // function to get the transformation matrix
     FillRecPointData(cluster);
     FillTrackParamData(&*itTrackParam);
 
     // 'inverse' (GlobalToLocal) rotation matrix
     // const Double_t* r(fGeoCombiTransInverse.GetRotationMatrix());
-    
+
     auto trans = transformation(cluster->getDEId());
     // LOG(info) << Form("cluster ID: %i", cluster->getDEId());
-    TMatrixD transMat(3,4);
+    TMatrixD transMat(3, 4);
     trans.GetTransformMatrix(transMat);
     // transMat.Print();
-    Double_t r[9];
-    r[0] = transMat(0,0);
-    r[1] = transMat(0,1);
-    r[2] = transMat(0,2);
-    r[3] = transMat(1,0);
-    r[4] = transMat(1,1);
-    r[5] = transMat(1,2);
-    r[6] = transMat(2,0);
-    r[7] = transMat(2,1);
-    r[8] = transMat(2,2);
-    
+    Double_t r[12];
+    r[0] = transMat(0, 0);
+    r[1] = transMat(0, 1);
+    r[2] = transMat(0, 2);
+    r[3] = transMat(1, 0);
+    r[4] = transMat(1, 1);
+    r[5] = transMat(1, 2);
+    r[6] = transMat(2, 0);
+    r[7] = transMat(2, 1);
+    r[8] = transMat(2, 2);
+    r[9] = transMat(0, 3);
+    r[10] = transMat(1, 3);
+    r[11] = transMat(2, 3);
+
     // calculate measurements
     if (fBFieldOn) {
 
       // use residuals (cluster - track) for measurement
       fMeas[0] = r[0] * (fClustPos[0] - fTrackPos[0]) + r[1] * (fClustPos[1] - fTrackPos[1]);
       fMeas[1] = r[3] * (fClustPos[0] - fTrackPos[0]) + r[4] * (fClustPos[1] - fTrackPos[1]);
-
     } else {
 
       // use cluster position for measurement
       fMeas[0] = (r[0] * fClustPos[0] + r[1] * fClustPos[1]);
       fMeas[1] = (r[3] * fClustPos[0] + r[4] * fClustPos[1]);
     }
+    // printf("DE %d, X: %f %f ; Y: %f %f ; Z: %f\n", cluster->getDEId(), fClustPos[0], fTrackPos[0], fClustPos[1], fTrackPos[1], fClustPos[2]);
 
+    if (fDoEvaluation) {
+      fTrkClRes->fClDetElem = cluster->getDEId();
+      fTrkClRes->fClDetElemNumber = GetDetElemNumber(cluster->getDEId());
+      fTrkClRes->fClusterX = fClustPos[0];
+      fTrkClRes->fClusterY = fClustPos[1];
+    
+      //fTrkClRes->fTrackX = fTrackPos0[0] + fTrackSlope0[0] * (fTrackPos[2] - fTrackPos0[2]); // fTrackPos[0];
+      //fTrkClRes->fTrackY = fTrackPos0[1] + fTrackSlope0[1] * (fTrackPos[2] - fTrackPos0[2]); // fTrackPos[1];
+      //fTrkClRes->fTrackSlopeX = fTrackSlope0[0];
+      //fTrkClRes->fTrackSlopeY = fTrackSlope0[1];
+
+      fTrkClRes->fTrackX = fTrackPos[0];
+      fTrkClRes->fTrackY = fTrackPos[1];
+      fTrkClRes->fTrackSlopeX = fTrackSlope[0];
+      fTrkClRes->fTrackSlopeY = fTrackSlope[1];
+
+      if (fTTree)
+        fTTree->Fill();
+    }
     // Set local equations
     LocalEquationX(r);
     LocalEquationY(r);
@@ -450,7 +479,7 @@ AliMillePedeRecord* Alignment::ProcessTrack(Track& track, const o2::mch::geo::Tr
   // save record data
   if (doAlignment) {
     fMillepede->SaveRecordData();
-    //fMillepede->CloseDataRecStorage();
+    // fMillepede->CloseDataRecStorage();
   }
 
   // return record
@@ -467,7 +496,7 @@ void Alignment::ProcessTrack(AliMillePedeRecord* trackRecord)
     return;
 
   // // make sure record storage is initialized
-  if (!fMillepede->GetRecord()){
+  if (!fMillepede->GetRecord()) {
     fMillepede->InitDataRecStorage(kFALSE);
   }
   // // copy content
@@ -927,17 +956,17 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
   LOG(info) << "Used " << lNDetElem << " DetElem, MeanZ= " << lMeanZ << ", SigmaZ= " << lSigmaZ;
 
   // create all possible arrays
-  Array fConstraintX[4];  //Array for constraint equation X
-  Array fConstraintY[4];  //Array for constraint equation Y
-  Array fConstraintP[4];  //Array for constraint equation P
-  Array fConstraintXZ[4]; //Array for constraint equation X vs Z
-  Array fConstraintYZ[4]; //Array for constraint equation Y vs Z
-  Array fConstraintPZ[4]; //Array for constraint equation P vs Z
+  Array fConstraintX[4];  // Array for constraint equation X
+  Array fConstraintY[4];  // Array for constraint equation Y
+  Array fConstraintP[4];  // Array for constraint equation P
+  Array fConstraintXZ[4]; // Array for constraint equation X vs Z
+  Array fConstraintYZ[4]; // Array for constraint equation Y vs Z
+  Array fConstraintPZ[4]; // Array for constraint equation P vs Z
 
   // do we really need these ?
-  Array fConstraintXY[4]; //Array for constraint equation X vs Y
-  Array fConstraintYY[4]; //Array for constraint equation Y vs Y
-  Array fConstraintPY[4]; //Array for constraint equation P vs Y
+  Array fConstraintXY[4]; // Array for constraint equation X vs Y
+  Array fConstraintYY[4]; // Array for constraint equation Y vs Y
+  Array fConstraintPY[4]; // Array for constraint equation P vs Y
 
   // fill Bool_t sides array based on masks, for convenience
   Bool_t lDetTLBR[4];
@@ -967,7 +996,7 @@ void Alignment::AddConstraints(const Bool_t* lChOnOff, const Bool_t* lVarXYT, UI
     auto fTransform = fTransformCreator(lDetElemId);
     o2::math_utils::Point3D<double> SlatPos{0.0, 0.0, 0.0};
     o2::math_utils::Point3D<double> GlobalPos;
-    
+
     fTransform.LocalToMaster(SlatPos, GlobalPos);
     lDetElemGloX = GlobalPos.x();
     lDetElemGloY = GlobalPos.y();
@@ -1149,176 +1178,90 @@ Double_t Alignment::GetParError(Int_t iPar) const
   return fMillepede->GetParError(iPar);
 }
 
-// //______________________________________________________________________
-// AliMUONGeometryTransformer* Alignment::ReAlign(
-//   const AliMUONGeometryTransformer* transformer,
-//   const double* misAlignments, Bool_t)
-// {
+//______________________________________________________________________
+void Alignment::ReAlign(
+  std::vector<o2::detectors::AlignParam>& params,
+  const double* misAlignments)
+{
 
-//   /// Returns a new AliMUONGeometryTransformer with the found misalignments
-//   /// applied.
+  /// Returns a new AliMUONGeometryTransformer with the found misalignments
+  /// applied.
 
-//   // Takes the internal geometry module transformers, copies them
-//   // and gets the Detection Elements from them.
-//   // Takes misalignment parameters and applies these
-//   // to the local transform of the Detection Element
-//   // Obtains the global transform by multiplying the module transformer
-//   // transformation with the local transformation
-//   // Applies the global transform to a new detection element
-//   // Adds the new detection element to a new module transformer
-//   // Adds the new module transformer to a new geometry transformer
-//   // Returns the new geometry transformer
+  // Takes the internal geometry module transformers, copies them
+  // and gets the Detection Elements from them.
+  // Takes misalignment parameters and applies these
+  // to the local transform of the Detection Element
+  // Obtains the global transform by multiplying the module transformer
+  // transformation with the local transformation
+  // Applies the global transform to a new detection element
+  // Adds the new detection element to a new module transformer
+  // Adds the new module transformer to a new geometry transformer
+  // Returns the new geometry transformer
 
-//   Double_t lModuleMisAlignment[fgNParCh] = {0};
-//   Double_t lDetElemMisAlignment[fgNParCh] = {0};
-//   const TClonesArray* oldMisAlignArray(transformer->GetMisAlignmentData());
+  Double_t lModuleMisAlignment[fgNParCh] = {0};
+  Double_t lDetElemMisAlignment[fgNParCh] = {0};
 
-//   AliMUONGeometryTransformer* newGeometryTransformer = new AliMUONGeometryTransformer();
-//   for (Int_t iMt = 0; iMt < transformer->GetNofModuleTransformers(); ++iMt) {
+  o2::detectors::AlignParam lAP;
+  for (int hc = 0; hc < 20; hc++) {
 
-//     // module transformers
-//     const AliMUONGeometryModuleTransformer* kModuleTransformer = transformer->GetModuleTransformer(iMt, kTRUE);
+    TGeoCombiTrans localDeltaTransform;
+    // localDeltaTransform.SetTranslation({0., 0., 0.});
+    // localDeltaTransform.SetRotation(TGeoRotation());
+    localDeltaTransform = DeltaTransform(lModuleMisAlignment);
 
-//     AliMUONGeometryModuleTransformer* newModuleTransformer = new AliMUONGeometryModuleTransformer(iMt);
-//     newGeometryTransformer->AddModuleTransformer(newModuleTransformer);
+    std::string sname = fmt::format("MCH/HC{}", hc);
+    lAP.setSymName(sname.c_str());
 
-//     // get transformation
-//     TGeoHMatrix deltaModuleTransform(DeltaTransform(lModuleMisAlignment));
+    double lPsi, lTheta, lPhi = 0.;
+    if (!isMatrixConvertedToAngles(localDeltaTransform.GetRotationMatrix(),
+                                   lPsi, lTheta, lPhi)) {
+      LOG(error) << "Problem extracting angles!";
+    }
 
-//     // update module
-//     TGeoHMatrix moduleTransform(*kModuleTransformer->GetTransformation());
-//     TGeoHMatrix newModuleTransform(AliMUONGeometryBuilder::Multiply(deltaModuleTransform, moduleTransform));
-//     newModuleTransformer->SetTransformation(newModuleTransform);
+    lAP.setGlobalParams(localDeltaTransform);
 
-//     // Get matching old alignment and update current matrix accordingly
-//     if (oldMisAlignArray) {
+    // lAP.print();
+    lAP.applyToGeometry();
+    params.emplace_back(lAP);
+    for (int de = 0; de < fgNDetElemHalfCh[hc]; de++) {
 
-//       const AliAlignObjMatrix* oldAlignObj(0);
-//       const Int_t moduleId(kModuleTransformer->GetModuleId());
-//       const Int_t volId = AliGeomManager::LayerToVolUID(AliGeomManager::kMUON, moduleId);
-//       for (Int_t pos = 0; pos < oldMisAlignArray->GetEntriesFast(); ++pos) {
+      // store detector element id and number
+      const Int_t iDetElemId = fgDetElemHalfCh[hc][de];
+      if (DetElemIsValid(iDetElemId)) {
 
-//         const AliAlignObjMatrix* localAlignObj(dynamic_cast<const AliAlignObjMatrix*>(oldMisAlignArray->At(pos)));
-//         if (localAlignObj && localAlignObj->GetVolUID() == volId) {
-//           oldAlignObj = localAlignObj;
-//           break;
-//         }
-//       }
+        const Int_t iDetElemNumber(GetDetElemNumber(iDetElemId));
 
-//       // multiply
-//       if (oldAlignObj) {
+        for (int i = 0; i < fgNParCh; ++i) {
+          lDetElemMisAlignment[i] = 0.0;
+          if (hc < fgNHalfCh) {
+            lDetElemMisAlignment[i] = misAlignments[iDetElemNumber * fgNParCh + i];
+          }
+        }
 
-//         TGeoHMatrix oldMatrix;
-//         oldAlignObj->GetMatrix(oldMatrix);
-//         deltaModuleTransform.Multiply(&oldMatrix);
-//       }
-//     }
+        sname = fmt::format("MCH/HC{}/DE{}", hc, fgDetElemHalfCh[hc][de]);
+        lAP.setSymName(sname.c_str());
+        localDeltaTransform = DeltaTransform(lDetElemMisAlignment);
 
-//     // Create module mis alignment matrix
-//     newGeometryTransformer->AddMisAlignModule(kModuleTransformer->GetModuleId(), deltaModuleTransform);
+        if (!isMatrixConvertedToAngles(localDeltaTransform.GetRotationMatrix(),
+                                       lPsi, lTheta, lPhi)) {
+          LOG(error) << "Problem extracting angles for " << sname.c_str();
+        }
 
-//     AliMpExMap* detElements = kModuleTransformer->GetDetElementStore();
 
-//     TIter next(detElements->CreateIterator());
-//     AliMUONGeometryDetElement* detElement;
-//     Int_t iDe(-1);
-//     while ((detElement = static_cast<AliMUONGeometryDetElement*>(next()))) {
-//       ++iDe;
-//       // make a new detection element
-//       AliMUONGeometryDetElement* newDetElement = new AliMUONGeometryDetElement(detElement->GetId(), detElement->GetVolumePath());
-//       TString lDetElemName(detElement->GetDEName());
-//       lDetElemName.ReplaceAll("DE", "");
+        lAP.setGlobalParams(localDeltaTransform);
+        lAP.applyToGeometry();
+        params.emplace_back(lAP);
+        
+      } else {
 
-//       // store detector element id and number
-//       const Int_t iDetElemId = lDetElemName.Atoi();
-//       if (DetElemIsValid(iDetElemId)) {
+        // "invalid" detector elements come from MTR and are left unchanged
+        LOG(info) << fmt::format("Keeping detElement {} unchanged\n", iDetElemId);
+      }
+    }
+  }
 
-//         const Int_t iDetElemNumber(GetDetElemNumber(iDetElemId));
-
-//         for (int i = 0; i < fgNParCh; ++i) {
-//           lDetElemMisAlignment[i] = 0.0;
-//           if (iMt < fgNTrkMod) {
-//             lDetElemMisAlignment[i] = misAlignments[iDetElemNumber * fgNParCh + i];
-//           }
-//         }
-
-//         // get transformation
-//         TGeoHMatrix deltaGlobalTransform(DeltaTransform(lDetElemMisAlignment));
-
-//         // update module
-//         TGeoHMatrix globalTransform(*detElement->GetGlobalTransformation());
-//         TGeoHMatrix newGlobalTransform(AliMUONGeometryBuilder::Multiply(deltaGlobalTransform, globalTransform));
-//         newDetElement->SetGlobalTransformation(newGlobalTransform);
-//         newModuleTransformer->GetDetElementStore()->Add(newDetElement->GetId(), newDetElement);
-
-//         // Get matching old alignment and update current matrix accordingly
-//         if (oldMisAlignArray) {
-
-//           const AliAlignObjMatrix* oldAlignObj(0);
-//           const int detElemId(detElement->GetId());
-//           const Int_t volId = AliGeomManager::LayerToVolUID(AliGeomManager::kMUON, detElemId);
-//           for (Int_t pos = 0; pos < oldMisAlignArray->GetEntriesFast(); ++pos) {
-
-//             const AliAlignObjMatrix* localAlignObj(dynamic_cast<const AliAlignObjMatrix*>(oldMisAlignArray->At(pos)));
-//             if (localAlignObj && localAlignObj->GetVolUID() == volId) {
-//               oldAlignObj = localAlignObj;
-//               break;
-//             }
-//           }
-
-//           // multiply
-//           if (oldAlignObj) {
-
-//             TGeoHMatrix oldMatrix;
-//             oldAlignObj->GetMatrix(oldMatrix);
-//             deltaGlobalTransform.Multiply(&oldMatrix);
-//           }
-//         }
-
-//         // Create misalignment matrix
-//         newGeometryTransformer->AddMisAlignDetElement(detElement->GetId(), deltaGlobalTransform);
-
-//       } else {
-
-//         // "invalid" detector elements come from MTR and are left unchanged
-//         Aliinfo(Form("Keeping detElement %i unchanged", iDetElemId));
-
-//         // update module
-//         TGeoHMatrix globalTransform(*detElement->GetGlobalTransformation());
-//         newDetElement->SetGlobalTransformation(globalTransform);
-//         newModuleTransformer->GetDetElementStore()->Add(newDetElement->GetId(), newDetElement);
-
-//         // Get matching old alignment and update current matrix accordingly
-//         if (oldMisAlignArray) {
-
-//           const AliAlignObjMatrix* oldAlignObj(0);
-//           const int detElemId(detElement->GetId());
-//           const Int_t volId = AliGeomManager::LayerToVolUID(AliGeomManager::kMUON, detElemId);
-//           for (Int_t pos = 0; pos < oldMisAlignArray->GetEntriesFast(); ++pos) {
-
-//             const AliAlignObjMatrix* localAlignObj(dynamic_cast<const AliAlignObjMatrix*>(oldMisAlignArray->At(pos)));
-//             if (localAlignObj && localAlignObj->GetVolUID() == volId) {
-//               oldAlignObj = localAlignObj;
-//               break;
-//             }
-//           }
-
-//           // multiply
-//           if (oldAlignObj) {
-
-//             TGeoHMatrix oldMatrix;
-//             oldAlignObj->GetMatrix(oldMatrix);
-//             newGeometryTransformer->AddMisAlignDetElement(detElement->GetId(), oldMatrix);
-//           }
-//         }
-//       }
-//     }
-
-//     newGeometryTransformer->AddModuleTransformer(newModuleTransformer);
-//   }
-
-//   return newGeometryTransformer;
-// }
+  // return params;
+}
 
 //______________________________________________________________________
 void Alignment::SetAlignmentResolution(const TClonesArray* misAlignArray, Int_t rChId, Double_t chResX, Double_t chResY, Double_t deResX, Double_t deResY)
@@ -1367,11 +1310,11 @@ void Alignment::SetAlignmentResolution(const TClonesArray* misAlignArray, Int_t 
             (volName.Length() == volName.Index(chName2) + chName2.Length())))) {
 
         volName.Remove(0, volName.Last('/') + 1);
-        //if (volName.Contains("GM")){
-        //  alignMat->SetCorrMatrix(mChCorrMatrix);
-        //}else if (volName.Contains("DE")){
-        //  alignMat->SetCorrMatrix(mDECorrMatrix);
-        //}
+        // if (volName.Contains("GM")){
+        //   alignMat->SetCorrMatrix(mChCorrMatrix);
+        // }else if (volName.Contains("DE")){
+        //   alignMat->SetCorrMatrix(mDECorrMatrix);
+        // }
       }
     }
   }
@@ -1452,24 +1395,24 @@ LocalTrackParam Alignment::RefitStraightTrack(Track& track, Double_t z0) const
 //_____________________________________________________
 void Alignment::FillDetElemData(const Cluster* cluster)
 {
-  LOG(fatal) << __PRETTY_FUNCTION__ << " is disabled";
+  // LOG(fatal) << __PRETTY_FUNCTION__ << " is disabled";
   // LOG(info) << __PRETTY_FUNCTION__ << " is enabled";
 
   /// Get information of current detection element
   // get detector element number from Alice ID
   const Int_t detElemId = cluster->getDEId();
   fDetElemNumber = GetDetElemNumber(detElemId);
-  cout << "Detector element ID: " << detElemId << "   Detector element number: " << fDetElemNumber <<endl;
+  // cout << "Detector element ID: " << detElemId << "   Detector element number: " << fDetElemNumber << endl;
   // get detector element
   // const AliMUONGeometryDetElement detElement(detElemId);
-  auto fTransform = fTransformCreator(detElemId);
+  // auto fTransform = fTransformCreator(detElemId);
   /*
   get the global transformation matrix and store its inverse, in order to manually perform
   the global to Local transformations needed to calculate the derivatives
   */
   // fTransform = fTransform.Inverse();
   // fTransform.GetTransformMatrix(fGeoCombiTransInverse);
-  cout << "done with FillDetElemData" <<endl;
+  // cout << "done with FillDetElemData" << endl;
 }
 
 //______________________________________________________________________
@@ -1536,6 +1479,7 @@ void Alignment::LocalEquationX(const Double_t* r)
 
     // use properly extrapolated position for derivatives vs 'delta_phi_z'
     SetGlobalDerivative(fDetElemNumber * fgNParCh + 2, -r[1] * trackPosX + r[0] * trackPosY);
+    // SetGlobalDerivative(fDetElemNumber * fgNParCh + 2, -r[1] * (trackPosX - r[9]) + r[0] * (trackPosY - r[10]));
 
     // use slopes at origin for derivatives vs 'delta_z'
     SetGlobalDerivative(fDetElemNumber * fgNParCh + 3, r[0] * fTrackSlope0[0] + r[1] * fTrackSlope0[1]);
@@ -1602,6 +1546,23 @@ TGeoCombiTrans Alignment::DeltaTransform(const double* lMisAlignment) const
 
   // combined rotation and translation.
   return TGeoCombiTrans(deltaTrans, deltaRot);
+}
+
+bool Alignment::isMatrixConvertedToAngles(const double* rot, double& psi, double& theta, double& phi) const
+{
+  /// Calculates the Euler angles in "x y z" notation
+  /// using the rotation matrix
+  /// Returns false in case the rotation angles can not be
+  /// extracted from the matrix
+  //
+  if (std::abs(rot[0]) < 1e-7 || std::abs(rot[8]) < 1e-7) {
+    LOG(error) << "Failed to extract roll-pitch-yall angles!";
+    return false;
+  }
+  psi = std::atan2(-rot[5], rot[8]);
+  theta = std::asin(rot[2]);
+  phi = std::atan2(-rot[1], rot[0]);
+  return true;
 }
 
 //______________________________________________________________________

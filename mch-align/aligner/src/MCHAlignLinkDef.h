@@ -24,6 +24,5 @@
 #pragma link C++ class AliVectorSparse + ;
 #pragma link C++ class AliMillePedeRecord + ;
 #pragma link C++ class o2::mch::Alignment + ;
-#pragma link C++ class AliLog + ;
 
 #endif
