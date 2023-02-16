@@ -44,3 +44,4 @@ initial geometry | corrections (align params) | final geometry
 
 - `o2sim_grpMagField.root` can be used as `GLO/Config/GRPMagField/snapshot.root` for a reconstruction workflow with zero magnetic field
 - `ctf_dictionary.root`, `MFTdictionary.bin` are old dictionaries used before [Jira # O2-2967](https://alice.its.cern.ch/jira/browse/O2-2967)
+- `o2__itsmft__TopologyDictionary_1653153860732.root` is the new cluster dictionary made from real data, as detailed in [Jira # O2-2967](https://alice.its.cern.ch/jira/browse/O2-2967)
