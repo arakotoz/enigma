@@ -42,9 +42,9 @@ struct AlignConfigHelper {
 
 void runAlign(const double chi2CutFactor = 65536, // 256
               const bool preferAlignedFile = false,
-              const bool useMilleAlignment = true,
+              const bool useMilleAlignment = false, // true,
               const bool doControl = true,
-              const int nEntriesAutoSave = 500)
+              const int nEntriesAutoSave = 5000)
 {
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
@@ -85,12 +85,14 @@ void runAlign(const double chi2CutFactor = 65536, // 256
 
   // get chain of records
 
+  TChain* recordChain = new TChain("milleRecords");
+
   std::string generalPath = "/Users/andry/cernbox/alice/mft/pilotbeam/505713/";
-  std::string alignStatus = "idealgeo";
+  std::string alignStatus = "ideal-geo";
   std::string alignParamFileName = "mft_alignment";
   std::string recordFileName = "mft_mille_records";
-  TChain* recordChain = new TChain("milleRecords");
   if (preferAlignedFile || applyMisalignment) {
+
     if (useMilleAlignment) {
       // records built from tracks reconstructed with pass 1 geometry
       alignStatus = "out-mille/pass1b";
@@ -102,15 +104,46 @@ void runAlign(const double chi2CutFactor = 65536, // 256
       recordFileName = "pass1_mft_mille_records";
       alignParamFileName = "pass1_mft_alignment";
     }
+    generalPath += alignStatus;
+    LOGF(info, "Load records from file %s/%s.root", generalPath.c_str(), recordFileName.c_str());
+    recordChain->Add(Form("%s/%s.root", generalPath.c_str(), recordFileName.c_str()));
+
   } else {
-    // records built from tracks reconstructed with ideal geometry
+    // records built with tracks from pilot beam reconstructed with ideal geometry
+    /*
     alignStatus = "out-mille/pass2";
     recordFileName = "pass2_mft_mille_records";
     alignParamFileName = "pass2_mft_alignment";
+    */
+
+    // records built from tracks of pilot beam + LHC22h reconstructed with ideal geometry
+    std::string basePath = "/Users/andry/cernbox/alice/mft/";
+    alignStatus = "out-mille/pass2";
+    recordFileName = "mft_mille_records";
+    alignParamFileName = "pass2_mft_alignment";
+
+    int runN = 505713;
+
+    std::stringstream generalPathSs;
+    generalPathSs << basePath << "/" << alignStatus << "/" << runN << "/";
+    generalPath = generalPathSs.str();
+    LOGF(info, "Load records from file %s/%s.root", generalPath.c_str(), recordFileName.c_str());
+    recordChain->Add(Form("%s/%s.root", generalPath.c_str(), recordFileName.c_str()));
+
+    runN = 520495;
+
+    generalPathSs.str(std::string());
+    generalPathSs << basePath << "/" << alignStatus << "/" << runN << "/001-005/";
+    generalPath = generalPathSs.str();
+    LOGF(info, "Load records from file %s/%s.root", generalPath.c_str(), recordFileName.c_str());
+    recordChain->Add(Form("%s/%s.root", generalPath.c_str(), recordFileName.c_str()));
+    generalPathSs.str(std::string());
+    generalPathSs << basePath << "/" << alignStatus << "/" << runN << "/006-008/";
+    generalPath = generalPathSs.str();
+    LOGF(info, "Load records from file %s/%s.root", generalPath.c_str(), recordFileName.c_str());
+    recordChain->Add(Form("%s/%s.root", generalPath.c_str(), recordFileName.c_str()));
+    generalPath = basePath + alignStatus;
   }
-  generalPath += alignStatus;
-  LOGF(info, "Load records from file %s/%s.root", generalPath.c_str(), recordFileName.c_str());
-  recordChain->Add(Form("%s/%s.root", generalPath.c_str(), recordFileName.c_str()));
 
   // compute alignment parameters
 
