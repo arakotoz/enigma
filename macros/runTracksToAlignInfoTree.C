@@ -27,8 +27,8 @@
 // runTracksToAlignInfoTree()
 
 //__________________________________________________________________________
-void runTracksToAlignInfoTree(const int fileStop = 4315,
-                              const int minNumberClustersPerTrack = 4,
+void runTracksToAlignInfoTree(const int fileStop = 1000, // 4315,
+                              const int minNumberClustersPerTrack = 6,
                               const bool preferAlignedFile = true,
                               const int nEntriesAutoSave = 10000)
 {
@@ -62,7 +62,8 @@ void runTracksToAlignInfoTree(const int fileStop = 4315,
   std::string basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
   std::string alignStatus = "";
   if (preferAlignedFile || applyMisalignment) {
-    alignStatus = "prealigned";
+    // alignStatus = "prealigned";
+    alignStatus = "mille_using_residuals";
   } else {
     alignStatus = "idealgeo";
   }
