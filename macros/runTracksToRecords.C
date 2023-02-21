@@ -46,7 +46,7 @@ struct AlignConfigHelper {
 // filestop = 8 for ideal-geo
 void runTracksToRecords(const Int_t fileStop = 833,
                         const int minPoints = 6,
-                        const bool preferAlignedFile = false, // true,
+                        const bool preferAlignedFile = false,
                         const bool useMilleAlignment = false,
                         const bool useNewCTFs = true,
                         const bool doControl = true,
@@ -114,15 +114,20 @@ void runTracksToRecords(const Int_t fileStop = 833,
   generalPathSs << basePath << "/" << runN << "/" << alignStatus;
   std::string generalPath = generalPathSs.str();
   */
-
   /*
-   const int runN = 520495;
-   std::string basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
-   std::string alignStatus = "ideal-geo";
-   std::stringstream generalPathSs;
-   generalPathSs << basePath << "/" << runN << "/" << alignStatus;
-   std::string generalPath = generalPathSs.str();
- */
+    const int runN = 520495;
+    std::string basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
+    std::string alignStatus = "ideal-geo";
+
+    if (preferAlignedFile || applyMisalignment) {
+      alignStatus = "reco-with-mille/pass2";
+    } else {
+      alignStatus = "ideal-geo";
+    }
+    std::stringstream generalPathSs;
+    generalPathSs << basePath << "/" << runN << "/" << alignStatus;
+    std::string generalPath = generalPathSs.str();
+    */
 
   // const Int_t fileStart = 1;
   TChain* mftclusterChain = new TChain("o2sim");
@@ -155,14 +160,16 @@ void runTracksToRecords(const Int_t fileStop = 833,
     */
 
   // This is for ~/cernbox/alice/mft/pilotbeam/505713/ideal-geo/new-ctf
+
   const int runN = 505713;
   std::string basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
   std::string alignStatus = "ideal-geo/new-ctf/";
   std::stringstream generalPathSs;
   generalPathSs << basePath << "/" << runN << "/" << alignStatus;
   std::string generalPath = generalPathSs.str();
-  static constexpr int nFiles = 587;
+  static constexpr int nFiles = 763;
   static constexpr std::array<int, nFiles> gridSubJob{
+    // first array of successful jobs done on the grid
     1, 2, 4, 7, 10, 12, 13, 14, 16, 18, 19, 20, 22, 24, 26,
     28, 30, 31, 34, 38, 39, 41, 42, 44, 45, 46, 47, 49, 50, 51,
     52, 55, 56, 57, 59, 60, 62, 64, 65, 66, 67, 68, 69, 70, 76,
@@ -202,7 +209,21 @@ void runTracksToRecords(const Int_t fileStop = 833,
     766, 768, 769, 770, 772, 773, 777, 778, 779, 780, 781, 782, 783, 784, 786,
     788, 789, 790, 791, 793, 794, 796, 797, 798, 799, 800, 801, 802, 803, 804,
     805, 807, 808, 810, 811, 812, 816, 817, 818, 819, 823, 824, 826, 829, 830,
-    832, 833};
+    832, 833,
+    // second array of successful jobs done on the grid
+    5, 8, 9, 11, 17, 21, 23, 25, 33, 35, 36, 37, 43, 48, 53,
+    54, 58, 61, 63, 71, 72, 73, 74, 75, 81, 85, 115, 117, 123, 124,
+    125, 143, 163, 168, 170, 175, 177, 178, 181, 183, 187, 194, 200, 220, 229,
+    237, 240, 249, 254, 266, 267, 274, 275, 280, 283, 287, 291, 305, 313, 321,
+    331, 334, 340, 344, 351, 356, 358, 361, 363, 365, 366, 369, 370, 371, 376,
+    377, 386, 388, 389, 395, 396, 401, 402, 407, 411, 413, 415, 416, 419, 423,
+    424, 425, 428, 431, 434, 435, 436, 437, 440, 445, 463, 476, 481, 489, 508,
+    511, 521, 530, 542, 546, 547, 551, 558, 560, 564, 565, 566, 568, 569, 579,
+    580, 589, 591, 592, 595, 601, 606, 607, 611, 612, 613, 614, 619, 620, 626,
+    630, 635, 639, 641, 645, 646, 648, 649, 652, 656, 659, 661, 662, 663, 665,
+    667, 675, 676, 682, 690, 694, 697, 722, 723, 724, 726, 743, 759, 761, 764,
+    767, 775, 776, 787, 792, 795, 806, 809, 814, 815, 831};
+
   Int_t countFiles = 0;
   for (const auto& ii : gridSubJob) {
     if (countFiles > fileStop) {
@@ -223,7 +244,6 @@ void runTracksToRecords(const Int_t fileStop = 833,
     countFiles++;
   }
   std::cout << "Number of files per chain = " << countFiles << std::endl;
-
   /*
     for (Int_t ii = fileStart; ii <= fileStop; ii++) {
       std::stringstream ss;
@@ -236,12 +256,11 @@ void runTracksToRecords(const Int_t fileStop = 833,
       std::string filePath = ss.str();
       mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
       mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
-      LOG(debug) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
-      LOG(debug) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
+      LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+      LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
     }
-  std::cout << "Number of files per chain = " << 1 + fileStop - fileStart << std::endl;
-    */
-
+    std::cout << "Number of files per chain = " << 1 + fileStop - fileStart << std::endl;
+  */
   // instantiate and configure the aligner
 
   AlignConfigHelper alignConfigParam;
