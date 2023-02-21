@@ -17,17 +17,13 @@
 #include "MFTBase/GeometryTGeo.h"
 #include "MFTAlignment/AlignSensorHelper.h"
 
+#include "helperGeom.h"
+
 #endif
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/printSensorInfo.C++
 // printSensorInfo()
-
-void print(o2::mft::AlignSensorHelper chipHelper,
-           bool wSymName,
-           bool wTranslation,
-           bool wRotation,
-           bool wDeg);
 
 void printSensorInfo(
   const bool wAllSensors = true,
@@ -35,7 +31,7 @@ void printSensorInfo(
   const bool wTranslation = true,
   const bool wRotation = true,
   const bool wDeg = true,
-  const bool preferAlignedFile = true)
+  const bool preferAlignedFile = false)
 {
   // geometry
 
@@ -60,38 +56,6 @@ void printSensorInfo(
   o2::mft::AlignSensorHelper chipHelper;
   for (int iChip = 0; iChip < NChips; iChip++) {
     chipHelper.setSensor(iChip);
-    print(chipHelper, wSymName, wTranslation, wRotation, wDeg);
+    printSensorGlobalTransform(chipHelper, wSymName, wTranslation, wRotation, wDeg);
   }
-}
-
-void print(o2::mft::AlignSensorHelper chipHelper,
-           bool wSymName,
-           bool wTranslation,
-           bool wRotation,
-           bool wDeg)
-{
-  std::streamsize ss = std::cout.precision();
-  std::stringstream name = chipHelper.getSensorFullName(wSymName);
-  std::cout << name.str().c_str();
-  if (wTranslation) {
-    std::cout << std::scientific << std::setprecision(2)
-              << " (cm) dx " << chipHelper.translateX()
-              << " dy " << chipHelper.translateY()
-              << " dz " << chipHelper.translateZ();
-  }
-  if (wRotation) {
-    constexpr double rad2deg = 180.0 / 3.14159265358979323846;
-    double rotX = chipHelper.angleRx();
-    double rotY = chipHelper.angleRy();
-    double rotZ = chipHelper.angleRz();
-    if (wDeg) {
-      rotX *= rad2deg;
-      rotY *= rad2deg;
-      rotZ *= rad2deg;
-      std::cout << " (deg)";
-    }
-    std::cout << std::scientific << std::setprecision(2)
-              << " Rx " << rotX << " Ry " << rotY << " Rz " << rotZ;
-  }
-  std::cout << std::setprecision(ss) << std::endl;
 }
