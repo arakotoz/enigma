@@ -25,7 +25,8 @@
 // exportAlignedGeom()
 
 void exportAlignedGeom(
-  std::string alignParamFileName = "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
+  std::string alignParamFileName = "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
+  const bool isFromMillePede = false,
   const bool wAllSensors = true)
 {
 
@@ -38,7 +39,13 @@ void exportAlignedGeom(
 
   // load alignement parameters
 
-  std::vector<o2::detectors::AlignParam> alignParameters = loadAlignParam(alignParamFileName);
+  std::vector<o2::detectors::AlignParam> alignParameters;
+  try {
+    alignParameters = loadAlignParam(alignParamFileName, isFromMillePede);
+  } catch (std::exception e) {
+    LOG(fatal) << "Abort, " << e.what();
+    return;
+  }
 
   // apply alignment
 

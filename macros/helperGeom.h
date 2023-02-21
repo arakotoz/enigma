@@ -19,7 +19,8 @@
 #include "MFTAlignment/AlignSensorHelper.h"
 
 //_________________________________
-std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName)
+std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName,
+                                                      const bool isFromMillePede = true)
 {
   if (alignParamFileName.empty()) {
     LOG(fatal) << "No input align params file name provided !";
@@ -31,7 +32,12 @@ std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFile
     LOG(fatal) << "Bad align param file " << alignParamFileName << ".root";
     throw std::exception();
   }
-  auto alignment = algFile.Get<std::vector<o2::detectors::AlignParam>>("alignment");
+  std::vector<o2::detectors::AlignParam>* alignment;
+  if (isFromMillePede) {
+    algFile.GetObject("alignment", alignment);
+  } else {
+    algFile.GetObject("ccdb_object", alignment);
+  }
   algFile.Close();
   if (!alignment) {
     LOG(fatal) << "Empty vector of align params !";
