@@ -102,22 +102,22 @@ bool addFilesToChains(TChain* mftclusterChain,
     foundPath = false;
     if (useNewCTFs) { // new CTFs
       if (alignStatus == AlignmentStatus::newpass1) {
-        basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
-        alignStatusPath = "reco-with-mille/new-ctf/new-pass1"; // ########## checked
+        basePath = "/Volumes/samt1/data/mft/2021";
+        alignStatusPath = "reco-with-mille/new-ctf/new-pass1";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 819;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::prealign) {
         basePath = "/Volumes/samt5/data/mft/pilotbeam";
-        alignStatusPath = "prealigned/new-ctf"; // ########## checked
+        alignStatusPath = "prealigned/new-ctf";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 819;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::idealgeo) {
         basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
-        alignStatusPath = "ideal-geo/new-ctf"; // ########## checked
+        alignStatusPath = "ideal-geo/new-ctf";
         mychoice = ChainBuildMethod::gridOk;
         fileStart = 1;
         fileStop = 763;
@@ -132,7 +132,7 @@ bool addFilesToChains(TChain* mftclusterChain,
     } else { // old CTFs
       if (alignStatus == AlignmentStatus::pass1) {
         basePath = "/Volumes/samt5/data/mft/pilotbeam";
-        alignStatusPath = "reco-with-mille/old-ctf/pass1"; // ########## checked
+        alignStatusPath = "reco-with-mille/old-ctf/pass1";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 44;
@@ -140,13 +140,13 @@ bool addFilesToChains(TChain* mftclusterChain,
       } else if (alignStatus == AlignmentStatus::prealign) {
         basePath = "/Volumes/samt5/data/mft/pilotbeam";
         alignStatusPath = "prealigned/old-ctf";
-        mychoice = ChainBuildMethod::continuous; // ########## checked
+        mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 4315;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::pass2) {
         basePath = "/Volumes/samt5/data/mft/pilotbeam";
-        alignStatusPath = "reco-with-mille/old-ctf/pass2"; // ########## checked
+        alignStatusPath = "reco-with-mille/old-ctf/pass2";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 173;
@@ -166,7 +166,7 @@ bool addFilesToChains(TChain* mftclusterChain,
     foundPath = false;
     if (useNewCTFs && alignStatus == AlignmentStatus::idealgeo) {
       basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
-      alignStatusPath = "ideal-geo/new-ctf"; // ########## checked
+      alignStatusPath = "ideal-geo/new-ctf";
       mychoice = ChainBuildMethod::gridFailed;
       fileStart = 1;
       fileStop = 1619;
@@ -185,20 +185,20 @@ bool addFilesToChains(TChain* mftclusterChain,
     foundPath = false;
     if (alignStatus == AlignmentStatus::pass1) {
       basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
-      alignStatusPath = "reco-with-mille/pass1"; // ########## checked
+      alignStatusPath = "reco-with-mille/pass1";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 1;
       fileStop = 8;
       foundPath = true;
     } else if (alignStatus == AlignmentStatus::pass2) {
-      basePath = "/Users/andry/cernbox/alice/mft/LHC22h"; // ########## checked
+      basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
       alignStatusPath = "reco-with-mille/pass2";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 1;
       fileStop = 8;
       foundPath = true;
     } else if (alignStatus == AlignmentStatus::idealgeo) {
-      basePath = "/Users/andry/cernbox/alice/mft/LHC22h"; // ########## checked
+      basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
       alignStatusPath = "ideal-geo";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 1;
@@ -217,11 +217,12 @@ bool addFilesToChains(TChain* mftclusterChain,
     LOG(info) << "run " << runN;
     foundPath = false;
     if (alignStatus == AlignmentStatus::pass2) {
-      basePath = "/Volumes/samt5/data/mft/2023/LHC23e"; // ########## checked
+      basePath = "/Volumes/samt5/data/mft/2023/LHC23e";
       alignStatusPath = "apass1_muon_alignment";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 188;
-      fileStop = 242;
+      fileStop = 198;
+      // fileStop = 242;
       foundPath = true;
     } else {
       LOG(error) << "run " << runN
