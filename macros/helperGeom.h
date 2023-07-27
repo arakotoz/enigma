@@ -11,6 +11,7 @@
 #include <TString.h>
 #include <Rtypes.h>
 
+#include "CommonUtils/NameConf.h"
 #include "ITSMFTReconstruction/ChipMappingMFT.h"
 #include "DetectorsCommonDataFormats/AlignParam.h"
 #include "MFTBase/Geometry.h"
@@ -20,7 +21,7 @@
 
 //_________________________________
 std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName,
-                                                      const bool isFromMillePede = true)
+                                                      const bool isDefaultTreeName = true)
 {
   if (alignParamFileName.empty()) {
     LOG(fatal) << "No input align params file name provided !";
@@ -33,10 +34,10 @@ std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFile
     throw std::exception();
   }
   std::vector<o2::detectors::AlignParam>* alignment;
-  if (isFromMillePede) {
-    algFile.GetObject("alignment", alignment);
+  if (isDefaultTreeName) {
+    algFile.GetObject(o2::base::NameConf::CCDBOBJECT.data(), alignment);
   } else {
-    algFile.GetObject("ccdb_object", alignment);
+    algFile.GetObject("alignment", alignment);
   }
   algFile.Close();
   if (!alignment) {
@@ -50,10 +51,10 @@ std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFile
 //_________________________________
 void printAlignParam(std::string alignParamFileName,
                      std::vector<o2::detectors::AlignParam> alignParameters,
-                     bool printScreen = false,
-                     bool wTranslation = true,
-                     bool wRotation = true,
-                     bool wDeg = false)
+                     const bool printScreen = false,
+                     const bool wTranslation = true,
+                     const bool wRotation = true,
+                     const bool wDeg = false)
 {
   o2::itsmft::ChipMappingMFT chipMappingMFT;
   int NChips = o2::itsmft::ChipMappingMFT::NChips;
@@ -118,10 +119,10 @@ void printAlignParam(std::string alignParamFileName,
 
 //_________________________________
 void printSensorGlobalTransform(o2::mft::AlignSensorHelper chipHelper,
-                                bool wSymName = true,
-                                bool wTranslation = true,
-                                bool wRotation = true,
-                                bool wDeg = true)
+                                const bool wSymName = true,
+                                const bool wTranslation = true,
+                                const bool wRotation = true,
+                                const bool wDeg = true)
 {
   std::streamsize ss = std::cout.precision();
   std::stringstream name = chipHelper.getSensorFullName(wSymName);
