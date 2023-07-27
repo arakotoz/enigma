@@ -158,7 +158,7 @@ void runAlign(const double chi2CutFactor = 65536, // 256
        generalPath.c_str(), alignParamFileName.c_str());
   TFile outAlignParamFile(Form("%s/%s.root", generalPath.c_str(), alignParamFileName.c_str()),
                           "recreate", "", 505);
-  outAlignParamFile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", "alignment");
+  outAlignParamFile.WriteObjectAny(&alignParams, "std::vector<o2::detectors::AlignParam>", o2::base::NameConf::CCDBOBJECT.data());
   outAlignParamFile.Close();
 
   // apply alignment
