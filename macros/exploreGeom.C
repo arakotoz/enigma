@@ -42,8 +42,13 @@ void exploreGeom(std::string alignParamFileName = "pass1_mft_alignment",
   o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();
 
   // load pass1 alignement parameters w.r.t prealigned geometry
-
-  std::vector<o2::detectors::AlignParam> alignParameters = loadAlignParam(alignParamFileName);
+  std::vector<o2::detectors::AlignParam> alignParameters;
+  try {
+    alignParameters = loadAlignParam(alignParamFileName);
+  } catch (std::exception e) {
+    LOG(fatal) << "Abort, " << e.what();
+    return;
+  }
   printAlignParam(alignParamFileName, alignParameters);
 
   // compute pass 1 alignment parameters w.r.t. ideal geometry

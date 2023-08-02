@@ -20,8 +20,7 @@
 #include "MFTAlignment/AlignSensorHelper.h"
 
 //_________________________________
-std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName,
-                                                      const bool isDefaultTreeName = true)
+std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName)
 {
   if (alignParamFileName.empty()) {
     LOG(fatal) << "No input align params file name provided !";
@@ -34,11 +33,19 @@ std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFile
     throw std::exception();
   }
   std::vector<o2::detectors::AlignParam>* alignment;
-  if (isDefaultTreeName) {
-    algFile.GetObject(o2::base::NameConf::CCDBOBJECT.data(), alignment);
-  } else {
-    algFile.GetObject("alignment", alignment);
+
+  // use the standard object name
+  algFile.GetObject(o2::base::NameConf::CCDBOBJECT.data(), alignment);
+
+  // test alternative object names
+  if (alignment == nullptr) {
+    algFile.GetObject("alignment", alignment); // pass 1 and pass 2 millepede
   }
+  if (alignment == nullptr) {
+    algFile.GetObject("ccdb_object", alignment); // mft_survey_disk
+  }
+
+  // check that a valid align param vector was found
   algFile.Close();
   if (!alignment) {
     LOG(fatal) << "Empty vector of align params !";
@@ -59,9 +66,9 @@ void printAlignParam(std::string alignParamFileName,
   o2::itsmft::ChipMappingMFT chipMappingMFT;
   int NChips = o2::itsmft::ChipMappingMFT::NChips;
 
-  std::ofstream OutStream;
-  OutStream.open(Form("%s.csv", alignParamFileName.c_str()));
-  OutStream << "half,disk,layer,zone,con,tr,chipid,dx,dy,dz,dRx,dRy,dRz" << endl;
+  std::ofstream outStream;
+  outStream.open(Form("%s.csv", alignParamFileName.c_str()));
+  outStream << "half,disk,layer,zone,con,tr,chipid,dx,dy,dz,dRx,dRy,dRz" << endl;
 
   o2::mft::AlignSensorHelper chipHelper;
 
@@ -77,7 +84,7 @@ void printAlignParam(std::string alignParamFileName,
     dRy = alignParameters[iChip].getTheta();
     dRz = alignParameters[iChip].getPhi();
 
-    OutStream << chipHelper.half() << ","
+    outStream << chipHelper.half() << ","
               << chipHelper.disk() << ","
               << chipHelper.layer() << ","
               << chipHelper.zone() << ","
@@ -114,11 +121,13 @@ void printAlignParam(std::string alignParamFileName,
       std::cout << std::setprecision(ss) << std::endl;
     }
   }
-  OutStream.close();
+  outStream.close();
 }
 
 //_________________________________
-void printSensorGlobalTransform(o2::mft::AlignSensorHelper chipHelper,
+void printSensorGlobalTransform(std::ofstream& outStream,
+                                const int iChip,
+                                o2::mft::AlignSensorHelper chipHelper,
                                 const bool wSymName = true,
                                 const bool wTranslation = true,
                                 const bool wRotation = true,
@@ -127,7 +136,17 @@ void printSensorGlobalTransform(o2::mft::AlignSensorHelper chipHelper,
   std::streamsize ss = std::cout.precision();
   std::stringstream name = chipHelper.getSensorFullName(wSymName);
   std::cout << name.str().c_str();
+  outStream << chipHelper.half() << ","
+            << chipHelper.disk() << ","
+            << chipHelper.layer() << ","
+            << chipHelper.zone() << ","
+            << chipHelper.connector() << ","
+            << chipHelper.transceiver() << ","
+            << iChip;
   if (wTranslation) {
+    outStream << "," << chipHelper.translateX()
+              << "," << chipHelper.translateY()
+              << "," << chipHelper.translateZ();
     std::cout << std::scientific << std::setprecision(2)
               << " (cm) dx " << chipHelper.translateX()
               << " dy " << chipHelper.translateY()
@@ -144,8 +163,12 @@ void printSensorGlobalTransform(o2::mft::AlignSensorHelper chipHelper,
       rotZ *= rad2deg;
       std::cout << " (deg)";
     }
+    outStream << "," << rotX
+              << "," << rotY
+              << "," << rotZ;
     std::cout << std::scientific << std::setprecision(2)
               << " Rx " << rotX << " Ry " << rotY << " Rz " << rotZ;
   }
+  outStream << endl;
   std::cout << std::setprecision(ss) << std::endl;
 }

@@ -30,7 +30,6 @@
 
 void printAlignParam(std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/", //"/Users/andry/cernbox/alice/mft/pilotbeam/505713/out-mille/pass1",
                      std::string alignParamFileName = "pass2_mft_alignment",
-                     const bool isDefaultTreeName = false, //"mft_alignment",
                      const bool wTranslation = true,
                      const bool wRotation = true,
                      const bool wDeg = false)
@@ -46,10 +45,14 @@ void printAlignParam(std::string generalPath = "/Users/andry/cernbox/alice/enigm
                              o2::math_utils::TransformType::L2G));
 
   // load alignement parameters from alignParamFileName
-
-  std::vector<o2::detectors::AlignParam> alignParameters = loadAlignParam(
-    Form("%s/%s", generalPath.c_str(), alignParamFileName.c_str()),
-    isDefaultTreeName);
+  std::vector<o2::detectors::AlignParam> alignParameters;
+  try {
+    alignParameters = loadAlignParam(
+      Form("%s/%s", generalPath.c_str(), alignParamFileName.c_str()));
+  } catch (std::exception e) {
+    LOG(fatal) << "Abort, " << e.what();
+    return;
+  }
 
   // print alignment parameters
 

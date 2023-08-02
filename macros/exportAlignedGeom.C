@@ -25,8 +25,8 @@
 // exportAlignedGeom()
 
 void exportAlignedGeom(
+  std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/",
   std::string alignParamFileName = "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
-  const bool isFromMillePede = false,
   const bool wAllSensors = true)
 {
 
@@ -41,7 +41,7 @@ void exportAlignedGeom(
 
   std::vector<o2::detectors::AlignParam> alignParameters;
   try {
-    alignParameters = loadAlignParam(alignParamFileName, isFromMillePede);
+    alignParameters = loadAlignParam(alignParamFileName);
   } catch (std::exception e) {
     LOG(fatal) << "Abort, " << e.what();
     return;
