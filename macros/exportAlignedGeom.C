@@ -26,7 +26,7 @@
 
 void exportAlignedGeom(
   std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/",
-  std::string alignParamFileName = "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
+  std::string alignParamFileName = "pass2_mft_alignment_sensor_shifted", // "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
   const bool wAllSensors = true)
 {
 
@@ -41,7 +41,8 @@ void exportAlignedGeom(
 
   std::vector<o2::detectors::AlignParam> alignParameters;
   try {
-    alignParameters = loadAlignParam(alignParamFileName);
+    alignParameters = loadAlignParam(
+      Form("%s/%s", generalPath.c_str(), alignParamFileName.c_str()));
   } catch (std::exception e) {
     LOG(fatal) << "Abort, " << e.what();
     return;
@@ -85,8 +86,21 @@ void exportAlignedGeom(
   // print global transformations in the new geometry for a given sensor
 
   o2::mft::AlignSensorHelper chipHelper;
+  std::ofstream outStream;
+  string csvFileName = "o2sim_geometry-aligned";
+  outStream.open(Form("%s-%s.csv", alignParamFileName.c_str(), csvFileName.c_str()));
+  outStream << "half,disk,layer,zone,con,tr,chipid";
+  if (wTranslation) {
+    outStream << ",dx,dy,dz";
+  }
+  if (wRotation) {
+    outStream << ",dRx,dRy,dRz";
+  }
+  outStream << endl;
+
   for (int iChip = 0; iChip < NChips; iChip++) {
     chipHelper.setSensor(iChip);
-    printSensorGlobalTransform(chipHelper, wSymName, wTranslation, wRotation, wDeg);
+    printSensorGlobalTransform(
+      outStream, iChip, chipHelper, wSymName, wTranslation, wRotation, wDeg);
   }
 }
