@@ -29,7 +29,7 @@
 // printAlignParam()
 
 void printAlignParam(std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/", //"/Users/andry/cernbox/alice/mft/pilotbeam/505713/out-mille/pass1",
-                     std::string alignParamFileName = "pass2_mft_alignment",
+                     std::string alignParamFileName = "pass2_mft_alignment_sensor_shifted",                // "pass2_mft_alignment",
                      const bool wTranslation = true,
                      const bool wRotation = true,
                      const bool wDeg = false)
