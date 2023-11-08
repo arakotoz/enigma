@@ -31,7 +31,7 @@ void printSensorInfo(
   const bool wTranslation = true,
   const bool wRotation = true,
   const bool wDeg = true,
-  const bool preferAlignedFile = false)
+  const bool preferAlignedFile = true)
 {
   // geometry
 
@@ -50,12 +50,27 @@ void printSensorInfo(
   if (!wAllSensors) {
     NChips = 10;
   }
+  std::ofstream outStream;
+  string csvFileName = "o2sim_geometry";
+  if (preferAlignedFile) {
+    csvFileName = "o2sim_geometry-aligned";
+  }
+  outStream.open(Form("%s.csv", csvFileName.c_str()));
+  outStream << "half,disk,layer,zone,con,tr,chipid";
+  if (wTranslation) {
+    outStream << ",dx,dy,dz";
+  }
+  if (wRotation) {
+    outStream << ",dRx,dRy,dRz";
+  }
+  outStream << endl;
 
   // print info for a given sensor
 
   o2::mft::AlignSensorHelper chipHelper;
   for (int iChip = 0; iChip < NChips; iChip++) {
     chipHelper.setSensor(iChip);
-    printSensorGlobalTransform(chipHelper, wSymName, wTranslation, wRotation, wDeg);
+    printSensorGlobalTransform(
+      outStream, iChip, chipHelper, wSymName, wTranslation, wRotation, wDeg);
   }
 }
