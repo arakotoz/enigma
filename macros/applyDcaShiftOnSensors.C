@@ -144,4 +144,17 @@ void applyDcaShiftOnSensors(
     &alignParamShifted, "std::vector<o2::detectors::AlignParam>",
     o2::base::NameConf::CCDBOBJECT.data());
   outAlignParamShiftedFile.Close();
+
+  // print
+
+  const bool wTranslation = true;
+  const bool wRotation = true;
+  const bool wDeg = false;
+
+  const bool printScreen = true;
+
+  printAlignParam(
+    Form("%s/%s_sensor_shifted.root", generalPath.c_str(), alignParamFileName.c_str()),
+    alignParamShifted,
+    printScreen, wTranslation, wRotation, wDeg);
 }
