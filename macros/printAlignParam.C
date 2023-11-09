@@ -36,7 +36,7 @@ void printAlignParam(std::string generalPath = "/Users/andry/cernbox/alice/enigm
 {
   // geometry
 
-  const bool preferAlignedFile = true;
+  const bool preferAlignedFile = false;
   const bool applyMisalignment = false;
   o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
   o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();

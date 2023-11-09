@@ -66,6 +66,12 @@ void printAlignParam(std::string alignParamFileName,
   o2::itsmft::ChipMappingMFT chipMappingMFT;
   int NChips = o2::itsmft::ChipMappingMFT::NChips;
 
+  int alignParamsSize = static_cast<int>(alignParameters.size());
+  LOG(info) << "printAlignParam() - vector of AlignParam, size = " << alignParamsSize;
+  if (alignParamsSize == NChips) {
+    LOG(info) << "printAlignParam() - same size as NChips = " << NChips;
+  }
+
   std::ofstream outStream;
   outStream.open(Form("%s.csv", alignParamFileName.c_str()));
   outStream << "half,disk,layer,zone,con,tr,chipid,dx,dy,dz,dRx,dRy,dRz" << endl;
@@ -73,54 +79,93 @@ void printAlignParam(std::string alignParamFileName,
   o2::mft::AlignSensorHelper chipHelper;
 
   double dx = 0., dy = 0., dz = 0., dRx = 0., dRy = 0., dRz = 0.;
+  int iChip = 0;
+  int uid = -1;
 
-  for (int iChip = 0; iChip < NChips; iChip++) {
+  for (auto const& aParam : alignParameters) {
 
-    chipHelper.setSensorOnlyInfo(iChip);
-    dx = alignParameters[iChip].getX();
-    dy = alignParameters[iChip].getY();
-    dz = alignParameters[iChip].getZ();
-    dRx = alignParameters[iChip].getPsi();
-    dRy = alignParameters[iChip].getTheta();
-    dRz = alignParameters[iChip].getPhi();
+    dx = aParam.getX();
+    dy = aParam.getY();
+    dz = aParam.getZ();
+    dRx = aParam.getPsi();
+    dRy = aParam.getTheta();
+    dRz = aParam.getPhi();
 
-    outStream << chipHelper.half() << ","
-              << chipHelper.disk() << ","
-              << chipHelper.layer() << ","
-              << chipHelper.zone() << ","
-              << chipHelper.connector() << ","
-              << chipHelper.transceiver() << ","
-              << iChip << ","
-              << dx << "," << dy << "," << dz << ","
-              << dRx << "," << dRy << "," << dRz
-              << endl;
-
-    if (printScreen) {
-      std::streamsize ss = std::cout.precision();
-      bool wSymName = true;
-      std::stringstream name = chipHelper.getSensorFullName(wSymName);
-      std::cout << name.str().c_str()
-                << " (" << alignParameters[iChip].getSymName() << ") ";
-      if (wTranslation) {
-        std::cout << std::scientific << std::setprecision(2)
-                  << " (cm) dx " << dx
-                  << " dy " << dy
-                  << " dz " << dz;
+    uid = aParam.getAlignableID();
+    if (uid > -1) { // --------------------------------------------------
+      // it is a sensor
+      if (iChip >= NChips) {
+        LOGF(error, "printAlignParam() - chip index %d >= %d", iChip, NChips);
+        continue;
       }
-      if (wRotation) {
-        constexpr double rad2deg = 180.0 / 3.14159265358979323846;
-        if (wDeg) {
-          dRx *= rad2deg;
-          dRy *= rad2deg;
-          dRz *= rad2deg;
-          std::cout << " (deg)";
+
+      chipHelper.setSensorOnlyInfo(iChip);
+      outStream << chipHelper.half() << ","
+                << chipHelper.disk() << ","
+                << chipHelper.layer() << ","
+                << chipHelper.zone() << ","
+                << chipHelper.connector() << ","
+                << chipHelper.transceiver() << ","
+                << iChip << ","
+                << dx << "," << dy << "," << dz << ","
+                << dRx << "," << dRy << "," << dRz
+                << endl;
+
+      if (printScreen) {
+        std::streamsize ss = std::cout.precision();
+        bool wSymName = true;
+        std::stringstream name = chipHelper.getSensorFullName(wSymName);
+        std::cout << name.str().c_str()
+                  << " (" << aParam.getSymName() << ") ";
+        if (wTranslation) {
+          std::cout << std::scientific << std::setprecision(2)
+                    << " (cm) dx " << dx
+                    << " dy " << dy
+                    << " dz " << dz;
         }
-        std::cout << std::scientific << std::setprecision(2)
-                  << " dRx " << dRx << " dRy " << dRy << " dRz " << dRz;
+        if (wRotation) {
+          constexpr double rad2deg = 180.0 / 3.14159265358979323846;
+          if (wDeg) {
+            dRx *= rad2deg;
+            dRy *= rad2deg;
+            dRz *= rad2deg;
+            std::cout << " (deg)";
+          }
+          std::cout << std::scientific << std::setprecision(2)
+                    << " dRx " << dRx << " dRy " << dRy << " dRz " << dRz;
+        }
+        std::cout << std::setprecision(ss) << std::endl;
       }
-      std::cout << std::setprecision(ss) << std::endl;
+      iChip++;
+
+    } else { // -----------------------------------------------------------
+      // not a sensor
+      if (printScreen) {
+        std::streamsize ss = std::cout.precision();
+        std::cout << "not a sensor uid " << uid
+                  << " (" << aParam.getSymName() << ") ";
+        if (wTranslation) {
+          std::cout << std::scientific << std::setprecision(2)
+                    << " (cm) dx " << dx
+                    << " dy " << dy
+                    << " dz " << dz;
+        }
+        if (wRotation) {
+          constexpr double rad2deg = 180.0 / 3.14159265358979323846;
+          if (wDeg) {
+            dRx *= rad2deg;
+            dRy *= rad2deg;
+            dRz *= rad2deg;
+            std::cout << " (deg)";
+          }
+          std::cout << std::scientific << std::setprecision(2)
+                    << " dRx " << dRx << " dRy " << dRy << " dRz " << dRz;
+        }
+        std::cout << std::setprecision(ss) << std::endl;
+      }
     }
   }
+
   outStream.close();
 }
 
