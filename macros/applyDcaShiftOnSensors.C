@@ -154,7 +154,7 @@ void applyDcaShiftOnSensors(
   const bool printScreen = true;
 
   printAlignParam(
-    Form("%s/%s_sensor_shifted.root", generalPath.c_str(), alignParamFileName.c_str()),
+    Form("%s/%s_sensor_shifted", generalPath.c_str(), alignParamFileName.c_str()),
     alignParamShifted,
     printScreen, wTranslation, wRotation, wDeg);
 }
