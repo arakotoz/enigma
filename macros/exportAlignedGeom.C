@@ -26,7 +26,7 @@
 
 void exportAlignedGeom(
   std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/",
-  std::string alignParamFileName = "pass2_mft_alignment_sensor_shifted", // "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
+  std::string alignParamFileName = "pass2_mft_alignment_half_mft_shifted", // "pass2_mft_alignment_sensor_shifted", // "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
   const bool wAllSensors = true)
 {
 
