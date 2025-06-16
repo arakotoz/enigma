@@ -25,10 +25,14 @@
 // exportAlignedGeom()
 
 void exportAlignedGeom(
-  std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/",
-  std::string alignParamFileName = "pass2_mft_alignment_half_mft_shifted", // "pass2_mft_alignment_sensor_shifted", // "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
+  const bool isLxplus = false,
+  std::string alignParamFileName = "pass2_mft_alignment_half_mft_rotated_and_shifted", // "pass2_mft_alignment_half_mft_shifted", // "pass2_mft_alignment_sensor_shifted", // "mft_survey_disk", // "pass2_mft_alignment", "pass1_wrt_ideal_mft_alignment", //"pass1_mft_alignment.root", //"mft_alignment.root"
   const bool wAllSensors = true)
 {
+  std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/";
+  if (isLxplus) {
+    generalPath = "/eos/home-a/arakotoz/alice/enigma/common-input/lhc2022h/";
+  }
 
   // load ideal geometry (o2sim_geometry.root)
 
