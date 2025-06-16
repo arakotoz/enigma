@@ -121,8 +121,8 @@ void applyGlobalTransformOnHalfMft(
 
   std::vector<o2::detectors::AlignParam> updatedAlignParam;
 
-  // fill the vectors of align param using dca shift
-  // for each half MFT
+  // fill the vectors of align param for each half MFT
+  // with global translations and global rotations
 
   double dx = 0., dy = 0., dz = 0., dRx = 0., dRy = 0., dRz = 0.;
   const bool global = true;
