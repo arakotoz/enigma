@@ -132,7 +132,7 @@ void applyGlobalTransformOnHalfMft(
     Int_t uid = -1; // default value of alignable ID (set for sensors only), see AlignParam.h
     dx = -meanDcaX[hIndex];
     dy = -meanDcaY[hIndex];
-    dRx = globalRx[hIndex];
+    dRx = -globalRx[hIndex];
     dRy = globalRy[hIndex];
     updatedAlignParam.emplace_back(
       geoSymbolicName,
